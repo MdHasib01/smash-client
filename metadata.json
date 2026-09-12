@@ -1,0 +1,6 @@
+{
+  "name": "SMASH",
+  "description": "Smart Multi-AI System Hub - A premium multi-AI orchestration platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
