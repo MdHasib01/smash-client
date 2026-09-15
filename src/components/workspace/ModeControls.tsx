@@ -1,145 +1,122 @@
 import React from 'react';
 import { Capability } from '../../types/accounts';
-import { Sliders, MonitorPlay, Maximize, Settings2 } from 'lucide-react';
+import { AspectRatio, GenerationOptions } from '../../types/api';
+import { Sliders } from 'lucide-react';
 
-export const ModeControls: React.FC<{ mode: Capability }> = ({ mode }) => {
+const selectClass = 'bg-transparent text-sm font-bold text-white border-none outline-none w-full [&>option]:bg-black';
+
+const Tile: React.FC<{ label: string; className?: string; children: React.ReactNode }> = ({ label, className, children }) => (
+  <div className={`glass-3 rounded-xl p-3 flex flex-col gap-2 ${className ?? ''}`}>
+    <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">{label}</span>
+    {children}
+  </div>
+);
+
+const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
+  { value: '1:1', label: '1:1 Square' },
+  { value: '4:5', label: '4:5 Portrait (Feed)' },
+  { value: '9:16', label: '9:16 Story / Reel' },
+  { value: '16:9', label: '16:9 Widescreen' },
+  { value: '3:4', label: '3:4 Portrait' },
+  { value: '4:3', label: '4:3 Landscape' },
+];
+
+interface ModeControlsProps {
+  mode: Capability;
+  options: GenerationOptions;
+  onChange: (options: GenerationOptions) => void;
+}
+
+/**
+ * Generation settings. IMAGE options are controlled and sent with the session;
+ * the other modes' options have no server-side effect yet and stay local.
+ */
+export const ModeControls: React.FC<ModeControlsProps> = ({ mode, options, onChange }) => {
+  const set = (patch: Partial<GenerationOptions>) => onChange({ ...options, ...patch });
+
   return (
     <div className="glass-2 rounded-[24px] p-6 border border-white/5">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-sm font-black tracking-tight text-white flex items-center gap-2">
-          <Sliders size={16} className="text-[#D946EF]"/> {mode.charAt(0) + mode.slice(1).toLowerCase()} Settings
+          <Sliders size={16} className="text-[#D946EF]" /> {mode.charAt(0) + mode.slice(1).toLowerCase()} Settings
         </h3>
-        <span className="text-[10px] uppercase font-bold tracking-widest text-smash-text-tertiary cursor-pointer hover:text-white flex items-center gap-1">
-          <Settings2 size={12} /> Advanced Drawer
-        </span>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {mode === 'IMAGE' && (
           <>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Aspect Ratio</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
-                <option>16:9 Widescreen</option>
-                <option>1:1 Square</option>
-                <option>4:5 Portrait</option>
-                <option>9:16 Vertical</option>
+            <Tile label="Aspect Ratio">
+              <select
+                className={selectClass}
+                value={options.aspectRatio ?? '1:1'}
+                onChange={(e) => set({ aspectRatio: e.target.value as AspectRatio })}
+              >
+                {ASPECT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
               </select>
-            </div>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Resolution</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
-                <option>1080p (Standard)</option>
-                <option>4K (Upscaled)</option>
-                <option>Fast (720p)</option>
+            </Tile>
+            <Tile label="Resolution">
+              <select
+                className={selectClass}
+                value={options.resolution ?? 'standard'}
+                onChange={(e) => set({ resolution: e.target.value })}
+              >
+                <option value="standard">Standard</option>
+                <option value="high">High detail</option>
               </select>
-            </div>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Generation Mode</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
-                <option>Text to Image</option>
-                <option>Image to Image</option>
-                <option>Inpainting / Edit</option>
+            </Tile>
+            <Tile label="Outputs per Model">
+              <select
+                className={selectClass}
+                value={options.outputsPerModel ?? 1}
+                onChange={(e) => set({ outputsPerModel: Number(e.target.value) })}
+              >
+                <option value={1}>1 Output</option>
+                <option value={2}>2 Outputs</option>
+                <option value={3}>3 Outputs</option>
+                <option value={4}>4 Outputs</option>
               </select>
-            </div>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Outputs per Model</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
-                <option>1 Output</option>
-                <option>2 Outputs</option>
-                <option>4 Outputs</option>
-              </select>
-            </div>
+            </Tile>
           </>
         )}
 
         {mode === 'VIDEO' && (
           <>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Aspect Ratio</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
+            <Tile label="Aspect Ratio">
+              <select className={selectClass}>
                 <option>16:9 Landscape</option>
                 <option>9:16 Vertical</option>
                 <option>1:1 Square</option>
               </select>
-            </div>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Duration</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
+            </Tile>
+            <Tile label="Duration">
+              <select className={selectClass}>
                 <option>5 Seconds</option>
                 <option>10 Seconds</option>
-                <option>15 Seconds</option>
-                <option>Looping (Auto)</option>
               </select>
-            </div>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2 md:col-span-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Motion & Camera</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
-                <option>Auto (Let AI Decide)</option>
-                <option>Slow Pan / Cinematic</option>
-                <option>Zoom In / Macro</option>
-                <option>Dynamic Action</option>
-              </select>
-            </div>
+            </Tile>
           </>
         )}
 
         {mode === 'TEXT' && (
-          <>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Operation Mode</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
-                <option>Normal / Chat</option>
-                <option>Deep Research</option>
-                <option>Data Analysis</option>
-                <option>Code Generation</option>
-                <option>Creative Writing</option>
-              </select>
-            </div>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Format</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
-                <option>Markdown</option>
-                <option>JSON Structured</option>
-                <option>Plain Text</option>
-              </select>
-            </div>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2 md:col-span-2">
-               <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">System Instructions (Context)</span>
-               <input type="text" placeholder="e.g. You are a senior React developer..." className="bg-transparent border-none outline-none text-sm font-medium placeholder:opacity-30 w-full" />
-            </div>
-          </>
+          <Tile label="Format">
+            <select className={selectClass}>
+              <option>Markdown</option>
+              <option>Plain Text</option>
+            </select>
+          </Tile>
         )}
-        
+
         {mode === 'AUDIO' && (
-          <>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Audio Type</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
-                <option>TTS (Text to Speech)</option>
-                <option>Music Generation</option>
-                <option>Sound Effects</option>
-                <option>STT (Transcription)</option>
-              </select>
-            </div>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Language</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none">
-                <option>English (US)</option>
-                <option>Bengali (BD)</option>
-                <option>Multilingual Auto</option>
-              </select>
-            </div>
-            <div className="glass-3 rounded-xl p-3 flex flex-col gap-2 md:col-span-2">
-              <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">Voice Profile / Emotion</span>
-              <select className="bg-transparent text-sm font-bold text-white border-none outline-none w-full">
-                <option>Professional / Neutral</option>
-                <option>Warm / Friendly</option>
-                <option>Energetic / Promo</option>
-                <option>Calm / Narrative</option>
-              </select>
-            </div>
-          </>
+          <Tile label="Language">
+            <select className={selectClass}>
+              <option>English (US)</option>
+              <option>Bengali (BD)</option>
+            </select>
+          </Tile>
         )}
       </div>
     </div>

@@ -38,6 +38,8 @@ export const CommandPalette: React.FC = () => {
     { id: 1, title: 'Open Image Workspace', icon: Image, action: () => navigate('/generate/image'), cat: 'Generators' },
     { id: 2, title: 'Open Text Orchestration', icon: FileText, action: () => navigate('/generate/text'), cat: 'Generators' },
     { id: 3, title: 'Manage Accounts', icon: Sparkles, action: () => navigate('/accounts'), cat: 'System' },
+    { id: 11, title: 'Manage Brands', icon: Zap, action: () => navigate('/brands'), cat: 'Workspaces' },
+    { id: 4, title: 'Manage Personas', icon: Sparkles, action: () => navigate('/personas'), cat: 'Workspaces' },
     { id: 5, title: 'Global Settings', icon: Settings, action: () => navigate('/settings'), cat: 'System' },
     { id: 6, title: 'Asset Library', icon: Zap, action: () => navigate('/assets'), cat: 'Workspaces' },
     { id: 7, title: 'Workflow Builder', icon: Terminal, action: () => navigate('/workflows'), cat: 'Workspaces' },

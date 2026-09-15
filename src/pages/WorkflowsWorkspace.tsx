@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { BrandOptions } from '../components/brands/BrandOptions';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Button } from '../components/ui/Button';
 import { Play, Save, Settings, Plus, Network, Cpu, LayoutTemplate, MessageSquare, Download, Activity, Folder, CheckCircle } from 'lucide-react';
@@ -249,9 +250,7 @@ export const WorkflowsWorkspace: React.FC = () => {
             onChange={(e) => setActiveProject(e.target.value)}
             className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-[#D946EF]/50 appearance-none min-w-[140px]"
           >
-            <option value="Milkimom">Milkimom</option>
-            <option value="Baby Herbs">Baby Herbs</option>
-            <option value="Personal">Personal</option>
+            <BrandOptions />
           </select>
         </div>
       }

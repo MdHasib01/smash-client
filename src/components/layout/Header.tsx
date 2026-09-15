@@ -5,9 +5,18 @@ import { Search, Bell, Activity, Layers, ChevronDown, User, Plus } from 'lucide-
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { Logo } from '../ui/Logo';
+import { useBrands } from '../../contexts/BrandsContext';
+import { useNavigate } from 'react-router-dom';
 
 export const Header: React.FC = () => {
-  const { toggleCommandPalette, activeProject, setActiveProject, setNotificationsOpen } = useGlobalUI();
+  const {
+    toggleCommandPalette,
+    activeProject,
+    setActiveProject,
+    setNotificationsOpen,
+  } = useGlobalUI();
+  const { brands } = useBrands();
+  const navigate = useNavigate();
   const { connections } = useAccounts();
   
   // Local state for popovers (simplified for the shell)
@@ -35,27 +44,37 @@ export const Header: React.FC = () => {
             className="flex items-center gap-2 text-sm font-bold text-white hover:bg-white/5 px-2 py-1.5 md:px-3 rounded-lg transition-colors"
           >
             <div className="w-6 h-6 rounded-md bg-gradient-primary flex items-center justify-center text-[10px] shrink-0">
-              {activeProject.charAt(0)}
+              {(activeProject || '?').charAt(0)}
             </div>
-            <span className="truncate max-w-[100px] md:max-w-none">{activeProject}</span>
+            <span className="truncate max-w-[100px] md:max-w-none">{activeProject || 'Add a brand'}</span>
             <ChevronDown size={14} className="text-smash-text-tertiary shrink-0" />
           </button>
 
           {showProjects && (
             <div className="absolute top-full left-0 mt-2 w-48 glass-3 rounded-xl p-2 border border-white/10 shadow-xl z-50 flex flex-col gap-1">
-              <div className="text-[10px] uppercase tracking-widest text-smash-text-tertiary px-2 py-1 font-bold">Projects</div>
-              {['Milkimom', 'Baby Herbs', 'NextNeed', 'Personal'].map(p => (
-                <button 
-                  key={p} 
-                  onClick={() => { setActiveProject(p); setShowProjects(false); }}
-                  className={cn("text-left px-2 py-1.5 rounded-lg text-sm text-smash-text-secondary hover:text-white hover:bg-white/5", activeProject === p && "text-white bg-white/10")}
+              <div className="text-[10px] uppercase tracking-widest text-smash-text-tertiary px-2 py-1 font-bold">Brands</div>
+              {brands.map(b => (
+                <button
+                  key={b.id}
+                  onClick={() => { setActiveProject(b.id); setShowProjects(false); }}
+                  className={cn("text-left px-2 py-1.5 rounded-lg text-sm text-smash-text-secondary hover:text-white hover:bg-white/5 flex items-center gap-2", activeProject === b.name && "text-white bg-white/10")}
                 >
-                  {p}
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: b.color }} />
+                  <span className="truncate">{b.name}</span>
                 </button>
               ))}
               <div className="h-px bg-white/5 my-1" />
-              <button className="text-left px-2 py-1.5 rounded-lg text-sm text-[#D946EF] hover:bg-white/5 flex items-center gap-2">
-                <Plus size={14} /> New Project
+              <button
+                onClick={() => { navigate('/brands'); setShowProjects(false); }}
+                className="text-left px-2 py-1.5 rounded-lg text-sm text-[#D946EF] hover:bg-white/5 flex items-center gap-2"
+              >
+                <Plus size={14} /> Manage Brands
+              </button>
+              <button
+                onClick={() => { navigate('/personas'); setShowProjects(false); }}
+                className="text-left px-2 py-1.5 rounded-lg text-sm text-smash-text-secondary hover:text-white hover:bg-white/5 flex items-center gap-2"
+              >
+                <User size={14} /> Personas
               </button>
             </div>
           )}

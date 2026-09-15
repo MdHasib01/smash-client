@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, Users, Sparkles, CheckSquare, 
   FolderHeart, History, GitMerge, LineChart, 
-  Settings, HelpCircle, ChevronLeft, ChevronRight, Bell
+  Settings, HelpCircle, ChevronLeft, ChevronRight, Bell, Contact, Building2
 } from 'lucide-react';
 import { useGlobalUI } from '../../contexts/GlobalUIContext';
 import { Logo } from '../ui/Logo';
@@ -17,6 +17,8 @@ export const Sidebar: React.FC = () => {
   const mainNav = [
     { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
     { name: 'Accounts', to: '/accounts', icon: Users },
+    { name: 'Brands', to: '/brands', icon: Building2 },
+    { name: 'Personas', to: '/personas', icon: Contact },
     { name: 'Generate', to: `/generate/${currentMode}`, icon: Sparkles }, // Defaults to text, will preserve state later
     { name: 'Results', to: '/results', icon: CheckSquare },
     { name: 'Assets', to: '/assets', icon: FolderHeart },

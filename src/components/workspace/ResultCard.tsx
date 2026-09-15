@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Job } from '../../types/execution';
 import { Button } from '../ui/Button';
-import { Maximize2, Download, RefreshCcw, Edit3, Star, Copy, Send, Check } from 'lucide-react';
-import { Badge } from '../ui/Badge';
+import { Maximize2, Download, RefreshCcw, Copy, Send, Check, ExternalLink, Bot, UserRound, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion } from 'motion/react';
+import { ResultLightbox, LightboxItem } from '../results/ResultLightbox';
+import { copyText, downloadUrl, fileNameFor } from '../../lib/download';
+import { useToast } from '../../contexts/ToastContext';
 
 interface ResultCardProps {
   job: Job;
@@ -13,129 +15,248 @@ interface ResultCardProps {
   isSelectedForCompare: boolean;
   onToggleCompare: (id: string) => void;
   onAction?: (action: string, jobId: string) => void;
+  prompt?: string;
 }
 
-export const ResultCard: React.FC<ResultCardProps> = ({ job, mode, isComparing, isSelectedForCompare, onToggleCompare, onAction }) => {
-  const isImage = mode === 'IMAGE';
-  const isText = mode === 'TEXT';
-  const isVideo = mode === 'VIDEO';
-  const isAudio = mode === 'AUDIO';
+/** One finished job on the live execution screen, showing its real output. */
+export const ResultCard: React.FC<ResultCardProps> = ({
+  job,
+  mode,
+  isComparing,
+  isSelectedForCompare,
+  onToggleCompare,
+  onAction,
+  prompt,
+}) => {
+  const { addToast } = useToast();
+  const [lightbox, setLightbox] = useState<LightboxItem | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  const url = job.resultUrl;
+  const text = job.contentText;
+  const mime = job.mimeType ?? '';
+  const isVideo = mime.startsWith('video/');
+  const isAudio = mime.startsWith('audio/') || mode === 'AUDIO';
+  const isVisual = Boolean(url) && !isAudio;
+  // The output arrives one poll after the job flips to COMPLETE.
+  const isPending = !url && !text;
+
+  const agentLine = job.target?.cli ? `${job.target.cli}${job.target.model ? ` · ${job.target.model}` : ''}` : null;
+  const title = `${job.personaName ? `${job.personaName} — ` : ''}${job.connection.name}`;
+
+  const openLightbox = () =>
+    setLightbox({
+      url,
+      text: url ? undefined : text,
+      mimeType: mime,
+      title,
+      subtitle: [job.connection.provider, agentLine, job.duration ? `${job.duration.toFixed(1)}s` : null]
+        .filter(Boolean)
+        .join(' · '),
+      prompt,
+      chips: [job.personaName, job.styleName].filter(Boolean) as string[],
+    });
+
+  const copy = async () => {
+    const ok = await copyText(url ?? text ?? '');
+    addToast(ok ? (url ? 'Image URL copied' : 'Text copied') : 'Could not copy', ok ? 'SUCCESS' : 'ERROR');
+  };
 
   const renderContent = () => {
-    if (isImage || isVideo) {
+    if (isPending) {
+      return (
+        <div className="flex flex-col items-center gap-2 text-smash-text-tertiary">
+          <Loader2 size={20} className="animate-spin" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Loading output…</span>
+        </div>
+      );
+    }
+
+    if (isAudio && url) {
+      return (
+        <div className="w-full p-6">
+          <audio src={url} controls className="w-full" />
+        </div>
+      );
+    }
+
+    if (isVisual) {
+      if (imageFailed) {
+        return (
+          <div className="flex flex-col items-center gap-2 text-center p-6 text-smash-text-tertiary">
+            <span className="text-xs">The output could not be displayed.</span>
+            <a href={url} target="_blank" rel="noopener" className="text-xs text-[#D946EF] hover:underline">
+              Open it directly
+            </a>
+          </div>
+        );
+      }
       return (
         <>
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 to-magenta-500/20 mix-blend-overlay" />
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop')] bg-cover bg-center opacity-80 mix-blend-luminosity" />
-          {isVideo && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40">
-                <div className="w-0 h-0 border-t-[8px] border-t-transparent border-l-[12px] border-l-white border-b-[8px] border-b-transparent ml-1" />
-              </div>
-            </div>
+          {/* Blurred copy fills the frame behind a non-square image. */}
+          {!isVideo && (
+            <img src={url} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110" />
+          )}
+          {isVideo ? (
+            <video src={url} className="relative w-full h-full object-contain" muted loop playsInline autoPlay />
+          ) : (
+            <img
+              src={url}
+              alt={prompt ?? 'Generated image'}
+              loading="lazy"
+              onError={() => setImageFailed(true)}
+              className="relative w-full h-full object-contain"
+            />
           )}
           {!isComparing && (
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
-              <Button variant="icon" className="glass-3 text-white w-10 h-10 hover:bg-[#D946EF]/20 hover:text-[#D946EF]"><Maximize2 size={16}/></Button>
-              <Button variant="icon" className="glass-3 text-white w-10 h-10 hover:bg-[#D946EF]/20 hover:text-[#D946EF]"><Download size={16}/></Button>
+            <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+              <Button variant="icon" title="View full size" onClick={openLightbox} className="glass-3 text-white w-10 h-10 hover:text-[#D946EF]">
+                <Maximize2 size={16} />
+              </Button>
+              <Button
+                variant="icon"
+                title="Download"
+                onClick={() => downloadUrl(url!, fileNameFor(title, url))}
+                className="glass-3 text-white w-10 h-10 hover:text-[#D946EF]"
+              >
+                <Download size={16} />
+              </Button>
+              <Button
+                variant="icon"
+                title="Open in a new tab"
+                onClick={() => window.open(url, '_blank', 'noopener')}
+                className="glass-3 text-white w-10 h-10 hover:text-[#D946EF]"
+              >
+                <ExternalLink size={16} />
+              </Button>
             </div>
           )}
         </>
       );
     }
-    
-    if (isAudio) {
-      return (
-        <div className="w-full p-6 flex flex-col gap-4">
-          <div className="flex items-center gap-4 w-full">
-            <Button variant="icon" className="glass-3 text-white w-12 h-12 shrink-0 rounded-full hover:bg-[#D946EF]/20 hover:text-[#D946EF] border border-white/10">
-               <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1" />
-            </Button>
-            <div className="flex-1 h-8 flex items-center gap-1 opacity-60">
-              {/* Mock Waveform */}
-              {Array.from({ length: 30 }).map((_, i) => (
-                <div key={i} className="flex-1 bg-white/40 rounded-full" style={{ height: `${Math.max(10, Math.random() * 100)}%` }} />
-              ))}
-            </div>
-          </div>
-          <div className="text-xs font-bold text-white/50 tracking-widest text-right">0:00 / 0:14</div>
-        </div>
-      );
-    }
 
-    // Default TEXT
+    // Text output.
     return (
-      <div className="text-sm text-white/90 leading-relaxed font-medium whitespace-pre-wrap">
-        Based on your prompt, here is the generated response from {job.connection.name}. This represents the text output module perfectly formatting the structured response with markdown support.
+      <div className="relative w-full h-full">
+        <div className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-words max-h-72 overflow-y-auto pr-1">
+          {text}
+        </div>
+        {!isComparing && (text?.length ?? 0) > 400 && (
+          <button
+            onClick={openLightbox}
+            className="mt-3 text-[10px] font-bold uppercase tracking-widest text-[#D946EF] hover:underline"
+          >
+            Read full response
+          </button>
+        )}
       </div>
     );
   };
 
   return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={cn(
-        "glass-2 rounded-[24px] border transition-all duration-300 flex flex-col overflow-hidden relative group",
-        isSelectedForCompare ? "border-[#D946EF] shadow-[0_0_20px_rgba(217,70,239,0.2)]" : "border-white/5",
-        isComparing && !isSelectedForCompare && "opacity-50 scale-[0.98]"
-      )}
-      onClick={() => isComparing && onToggleCompare(job.id)}
-    >
-      {/* Compare Mode Checkbox Overlay */}
-      {isComparing && (
-        <div className="absolute top-4 right-4 z-20">
-          <div className={cn(
-            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shadow-lg",
-            isSelectedForCompare ? "bg-[#D946EF] border-[#D946EF]" : "bg-black/50 border-white/30 backdrop-blur-md"
-          )}>
-            {isSelectedForCompare && <Check size={14} className="text-white" />}
-          </div>
-        </div>
-      )}
-
-      {/* Result Display Area */}
-      <div className={cn(
-        "relative w-full overflow-hidden bg-black/40 flex items-center justify-center",
-        isImage || isVideo ? "aspect-square" : isAudio ? "min-h-[120px]" : "min-h-[200px] p-6 items-start justify-start"
-      )}>
-        {renderContent()}
-      </div>
-
-      {/* Metadata & Actions Footer */}
-      <div className="p-4 flex flex-col gap-3 glass-1 border-t border-white/5 relative z-10">
-        <div className="flex justify-between items-center">
-          <div className="flex flex-col gap-0.5">
-            <span className="font-bold text-sm text-white flex items-center gap-1.5">
-              {job.connection.name}
-              {job.attempts.length > 1 && <Badge variant="warning" className="text-[8px] px-1 py-0 h-4">Auto-Fixed</Badge>}
-            </span>
-            <span className="text-[9px] font-black uppercase tracking-widest text-smash-text-secondary flex items-center gap-1">
-              {job.connection.provider} • {job.duration?.toFixed(1)}s
-            </span>
-          </div>
-          <Button variant="icon" size="sm" className="h-7 w-7 text-smash-text-tertiary hover:text-rose-400 hover:bg-rose-400/10">
-            <Star size={14} />
-          </Button>
-        </div>
-
-        {!isComparing && (
-          <div className="flex gap-1.5">
-            <Button variant="secondary" size="sm" className="h-7 px-2 text-[9px] flex-1">
-              <Copy size={10} className="mr-1.5" /> {(isImage || isVideo || isAudio) ? 'COPY URL' : 'COPY'}
-            </Button>
-            <Button variant="secondary" size="sm" className="h-7 px-2 text-[9px] flex-1" onClick={() => onAction && onAction('RETRY', job.id)}>
-              <RefreshCcw size={10} className="mr-1.5" /> RETRY
-            </Button>
-            {(isImage || isVideo || isAudio) && (
-              <Button variant="secondary" size="sm" className="h-7 px-2 text-[9px] flex-1 text-[#D946EF] hover:bg-[#D946EF]/10 border-[#D946EF]/20" onClick={() => onAction && onAction('USE_REF', job.id)}>
-                <Send size={10} className="mr-1.5" /> USE REF
-              </Button>
-            )}
+    <>
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={cn(
+          'glass-2 rounded-[24px] border transition-all duration-300 flex flex-col overflow-hidden relative group',
+          isSelectedForCompare ? 'border-[#D946EF] shadow-[0_0_20px_rgba(217,70,239,0.2)]' : 'border-white/5',
+          isComparing && !isSelectedForCompare && 'opacity-50 scale-[0.98]'
+        )}
+        onClick={() => isComparing && onToggleCompare(job.id)}
+      >
+        {isComparing && (
+          <div className="absolute top-4 right-4 z-20">
+            <div
+              className={cn(
+                'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shadow-lg',
+                isSelectedForCompare ? 'bg-[#D946EF] border-[#D946EF]' : 'bg-black/50 border-white/30 backdrop-blur-md'
+              )}
+            >
+              {isSelectedForCompare && <Check size={14} className="text-white" />}
+            </div>
           </div>
         )}
-      </div>
-    </motion.div>
+
+        <div
+          className={cn(
+            'relative w-full overflow-hidden bg-black/40 flex items-center justify-center',
+            isVisual || (isPending && mode !== 'TEXT') ? 'aspect-square' : isAudio ? 'min-h-[120px]' : 'min-h-[200px] p-6 items-start justify-start'
+          )}
+        >
+          {renderContent()}
+        </div>
+
+        <div className="p-4 flex flex-col gap-3 glass-1 border-t border-white/5 relative z-10">
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="font-bold text-sm text-white flex items-center gap-1.5 min-w-0">
+              <span className="truncate">{job.connection.name}</span>
+              {job.attempts.length > 1 && (
+                <span className="shrink-0 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300">
+                  Auto-fixed
+                </span>
+              )}
+            </span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] font-black uppercase tracking-widest text-smash-text-secondary">
+              <span>{job.connection.provider}</span>
+              {agentLine && (
+                <span className="flex items-center gap-1 text-violet-300">
+                  <Bot size={10} /> {agentLine}
+                </span>
+              )}
+              {job.duration != null && <span>{job.duration.toFixed(1)}s</span>}
+              {job.personaName && (
+                <span className="flex items-center gap-1 text-[#D946EF]">
+                  <UserRound size={10} /> {job.personaName}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {!isComparing && !isPending && (
+            <div className="flex gap-1.5">
+              <Button variant="secondary" size="sm" className="h-7 px-2 text-[9px] flex-1" onClick={copy}>
+                <Copy size={10} className="mr-1.5" /> {url ? 'COPY URL' : 'COPY'}
+              </Button>
+              {url ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-7 px-2 text-[9px] flex-1"
+                  onClick={() => downloadUrl(url, fileNameFor(title, url))}
+                >
+                  <Download size={10} className="mr-1.5" /> SAVE
+                </Button>
+              ) : (
+                <Button variant="secondary" size="sm" className="h-7 px-2 text-[9px] flex-1" onClick={openLightbox}>
+                  <Maximize2 size={10} className="mr-1.5" /> VIEW
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 px-2 text-[9px] flex-1"
+                onClick={() => onAction && onAction('RETRY', job.id)}
+              >
+                <RefreshCcw size={10} className="mr-1.5" /> RETRY
+              </Button>
+              {url && !isAudio && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-7 px-2 text-[9px] flex-1 text-[#D946EF] hover:bg-[#D946EF]/10 border-[#D946EF]/20"
+                  onClick={() => onAction && onAction('USE_REF', job.id)}
+                >
+                  <Send size={10} className="mr-1.5" /> USE REF
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      <ResultLightbox item={lightbox} onClose={() => setLightbox(null)} />
+    </>
   );
 };

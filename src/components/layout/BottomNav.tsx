@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Sparkles, CheckSquare, History, MoreHorizontal, Settings, HelpCircle, Bell, Users, FolderHeart, GitMerge, LineChart } from 'lucide-react';
+import { LayoutDashboard, Sparkles, CheckSquare, History, MoreHorizontal, Settings, HelpCircle, Bell, Users, FolderHeart, GitMerge, LineChart, Contact, Building2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useGlobalUI } from '../../contexts/GlobalUIContext';
 import { AnimatePresence, motion } from 'motion/react';
@@ -19,6 +19,8 @@ export const BottomNav: React.FC = () => {
 
   const moreNav = [
     { name: 'Accounts', to: '/accounts', icon: Users },
+    { name: 'Brands', to: '/brands', icon: Building2 },
+    { name: 'Personas', to: '/personas', icon: Contact },
     { name: 'Assets', to: '/assets', icon: FolderHeart },
     { name: 'Workflows', to: '/workflows', icon: GitMerge },
     { name: 'Analytics', to: '/analytics', icon: LineChart },

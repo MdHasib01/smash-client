@@ -5,6 +5,8 @@ import { Paperclip, Image as ImageIcon, Send, Sparkles, Mic, FileText, FileVideo
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { useGlobalUI } from '../../contexts/GlobalUIContext';
+import { usePersonas } from '../../contexts/PersonasContext';
+import { PersonaSelector } from './PersonaSelector';
 
 interface CommandComposerProps {
   prompt: string;
@@ -12,13 +14,40 @@ interface CommandComposerProps {
   onRun: () => void;
   selectedCount: number;
   activeMode: string;
+  isRunning?: boolean;
+  personaId: string | null;
+  onPersonaChange: (id: string | null) => void;
+  styleId: string | null;
+  onStyleChange: (id: string | null) => void;
+  referenceIds: string[];
+  onReferencesChange: (ids: string[]) => void;
 }
 
-export const CommandComposer: React.FC<CommandComposerProps> = ({ prompt, setPrompt, onRun, selectedCount, activeMode }) => {
+export const CommandComposer: React.FC<CommandComposerProps> = ({
+  prompt,
+  setPrompt,
+  onRun,
+  selectedCount,
+  activeMode,
+  isRunning,
+  personaId,
+  onPersonaChange,
+  styleId,
+  onStyleChange,
+  referenceIds,
+  onReferencesChange,
+}) => {
   const [isFocused, setIsFocused] = useState(false);
   const { activeProject } = useGlobalUI();
+  const { personas } = usePersonas();
+  const persona = personas.find((p) => p.id === personaId);
 
   const getPlaceholder = () => {
+    if (persona && activeMode === 'IMAGE') {
+      return persona.kind === 'PROFILE'
+        ? 'e.g. generate an image of me and my baby at the park'
+        : `e.g. a mom taking care of her baby, with ${persona.name} on the table`;
+    }
     switch(activeMode) {
       case 'IMAGE': return `Describe the image for ${activeProject}...`;
       case 'VIDEO': return `Describe the video scene for ${activeProject}...`;
@@ -71,12 +100,17 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({ prompt, setPro
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Quick Presets & Active Project */}
+      <PersonaSelector
+        personaId={personaId}
+        onPersonaChange={onPersonaChange}
+        styleId={styleId}
+        onStyleChange={onStyleChange}
+        enabledReferenceIds={referenceIds}
+        onReferencesChange={onReferencesChange}
+      />
+
+      {/* Quick Presets */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        <div className="flex items-center gap-1.5 bg-[#D946EF]/10 text-[#D946EF] border border-[#D946EF]/20 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest shrink-0 mr-2">
-          <Folder size={10} /> {activeProject}
-        </div>
-        <div className="w-px h-4 bg-white/10 shrink-0 mr-2" />
         <span className="text-[9px] font-black tracking-widest uppercase text-smash-text-tertiary shrink-0 mr-2">Presets:</span>
         {getPresets().map(preset => (
           <button 
@@ -140,7 +174,8 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({ prompt, setPro
                 variant="primary" 
                 size="lg" 
                 onClick={onRun}
-                disabled={selectedCount === 0 || !prompt.trim()}
+                disabled={selectedCount === 0 || !prompt.trim() || isRunning}
+                isLoading={isRunning}
                 className="px-8 rounded-xl font-black text-sm tracking-tight h-12 shadow-[0_0_20px_rgba(217,70,239,0.3)] hover:shadow-[0_0_30px_rgba(217,70,239,0.5)]"
               >
                 <Sparkles size={16} /> RUN SMASH

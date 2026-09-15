@@ -29,7 +29,16 @@ export interface Job {
   attempts: Attempt[];
   duration?: number;
   resultUrl?: string;
-  limitResetTime?: number; 
+  /** Output of a finished job, filled in from its Result. */
+  resultId?: string;
+  contentText?: string;
+  mimeType?: string;
+  personaName?: string;
+  styleName?: string;
+  /** The node-agent CLI/model this job ran on, if any. */
+  target?: { cli?: string; model?: string };
+  error?: string;
+  limitResetTime?: number;
   autoResume?: boolean;
 }
 

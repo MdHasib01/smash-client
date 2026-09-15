@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useBrands } from './BrandsContext';
 
 interface GlobalUIContextType {
   isSidebarCollapsed: boolean;
@@ -16,8 +17,12 @@ interface GlobalUIContextType {
   setCommandPaletteOpen: (v: boolean) => void;
   isNotificationsOpen: boolean;
   setNotificationsOpen: (v: boolean) => void;
+  /** Name of the active brand; backed by BrandsContext. */
   activeProject: string;
+  /** Accepts a brand name or id. */
   setActiveProject: (v: string) => void;
+  isBrandManagerOpen: boolean;
+  setBrandManagerOpen: (v: boolean) => void;
   currentMode: string;
   setCurrentMode: (v: string) => void;
 }
@@ -25,18 +30,24 @@ interface GlobalUIContextType {
 const GlobalUIContext = createContext<GlobalUIContextType | undefined>(undefined);
 
 export const GlobalUIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { brands, activeBrand, setActiveBrandId } = useBrands();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isInspectorOpen, setInspectorOpen] = useState(false);
   const [inspectorContent, setInspectorContent] = useState<ReactNode>(null);
   const [inspectorTitle, setInspectorTitle] = useState('Inspector');
   const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
-  const [activeProject, setActiveProject] = useState('Milkimom');
+  const [isBrandManagerOpen, setBrandManagerOpen] = useState(false);
   const [currentMode, setCurrentMode] = useState('text');
 
   const toggleSidebar = () => setSidebarCollapsed(!isSidebarCollapsed);
   const toggleInspector = () => setInspectorOpen(!isInspectorOpen);
   const toggleCommandPalette = () => setCommandPaletteOpen(!isCommandPaletteOpen);
+
+  const setActiveProject = (value: string) => {
+    const brand = brands.find((b) => b.id === value || b.name === value);
+    if (brand) setActiveBrandId(brand.id);
+  };
 
   return (
     <GlobalUIContext.Provider
@@ -56,8 +67,10 @@ export const GlobalUIProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCommandPaletteOpen,
         isNotificationsOpen,
         setNotificationsOpen,
-        activeProject,
+        activeProject: activeBrand?.name ?? '',
         setActiveProject,
+        isBrandManagerOpen,
+        setBrandManagerOpen,
         currentMode,
         setCurrentMode,
       }}

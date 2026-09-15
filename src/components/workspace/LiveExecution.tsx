@@ -132,6 +132,7 @@ export const LiveExecution: React.FC<LiveExecutionProps> = ({ jobs, mode, onCanc
                     isSelectedForCompare={compareIds.includes(job.id)}
                     onToggleCompare={handleToggleCompare}
                     onAction={onAction}
+                    prompt={currentSession?.prompt}
                   />
                 );
               }

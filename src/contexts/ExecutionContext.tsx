@@ -1,12 +1,37 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Job, ExecutionSession, JobStatus, Attempt } from '../types/execution';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { ExecutionSession, Job } from '../types/execution';
 import { useAccounts, SmashConnection, Capability } from './AccountsContext';
 import { useToast } from './ToastContext';
+import { get, list, post } from '../lib/api';
+import {
+  AgentTarget,
+  ApiResult,
+  CreateSessionBody,
+  GenerationContext,
+  GenerationOptions,
+  Session as ApiSession,
+  isSessionTerminal,
+} from '../types/api';
+
+export interface StartSessionInput {
+  mode: Capability;
+  prompt: string;
+  connectionIds: string[];
+  personaId?: string | null;
+  styleId?: string | null;
+  referenceIds?: string[];
+  options?: GenerationOptions;
+  agentTargets?: Record<string, AgentTarget>;
+  /** Brand to file the run under; a persona's own brand still wins server-side. */
+  projectId?: string | null;
+}
 
 interface ExecutionContextState {
   currentSession: ExecutionSession | null;
-  startSession: (mode: Capability, prompt: string, selectedConnections: SmashConnection[]) => void;
-  updateJob: (jobId: string, updates: Partial<Job>) => void;
+  /** Compiled persona/style/prompt for the running session, once the server reports it. */
+  context: GenerationContext | null;
+  isStarting: boolean;
+  startSession: (input: StartSessionInput) => Promise<void>;
   handleJobAction: (action: string, jobId: string) => void;
   stopSession: () => void;
   pauseSession: () => void;
@@ -16,260 +41,239 @@ interface ExecutionContextState {
 
 const ExecutionContext = createContext<ExecutionContextState | undefined>(undefined);
 
+const POLL_INTERVAL_MS = 2000;
+
+const toMillis = (value?: string | number) => {
+  if (value === undefined || value === null) return Date.now();
+  return typeof value === 'number' ? value : new Date(value).getTime();
+};
+
+/**
+ * Map a server session onto the shape the execution UI already renders.
+ * Connection details are enriched from the accounts list where possible; the
+ * job's own denormalised snapshot is the fallback, so history still reads
+ * correctly after a connection is renamed or deleted.
+ */
+function toExecutionSession(
+  session: ApiSession,
+  connections: SmashConnection[],
+  results: Map<string, ApiResult> = new Map()
+): ExecutionSession {
+  const byId = new Map(connections.map((c) => [c.id, c]));
+
+  const jobs: Job[] = session.jobs.map((job) => {
+    const snapshot = job.connection;
+    const known = byId.get(String(job.connectionId));
+    const connection: SmashConnection =
+      known ??
+      ({
+        id: String(job.connectionId),
+        name: snapshot?.name ?? 'Connection',
+        provider: snapshot?.provider ?? '',
+        model: snapshot?.model ?? '',
+        type: (snapshot?.type as SmashConnection['type']) ?? 'API',
+        capabilities: [job.mode],
+        status: 'ACTIVE',
+        health: 100,
+        priority: 1,
+        enabled: true,
+      } as SmashConnection);
+
+    return {
+      id: job.id,
+      connection,
+      status: job.status as Job['status'],
+      progress: job.progress,
+      duration: job.duration,
+      resultUrl: results.get(job.id)?.contentUrl ?? job.resultUrl,
+      resultId: results.get(job.id)?.id ?? job.result,
+      contentText: results.get(job.id)?.contentText,
+      mimeType: results.get(job.id)?.mimeType,
+      personaName: job.context?.personaName,
+      styleName: job.context?.styleName,
+      target: job.target,
+      error: job.error,
+      attempts: (job.attempts ?? []).map((attempt: any) => ({
+        number: attempt.number,
+        startTime: toMillis(attempt.startTime),
+        prompt: attempt.prompt ?? session.prompt,
+        status: attempt.status,
+        duration: attempt.duration,
+      })),
+    };
+  });
+
+  return {
+    id: session.id,
+    mode: session.mode as Capability,
+    prompt: session.prompt,
+    startTime: toMillis(session.startTime),
+    status: session.status,
+    jobs,
+    events: (session.events ?? []).map((event, index) => ({
+      id: event.id ?? `${session.id}-${index}`,
+      time: toMillis(event.time),
+      message: event.message,
+      type: event.type,
+      jobId: event.jobId,
+    })),
+  };
+}
+
 export const ExecutionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentSession, setCurrentSession] = useState<ExecutionSession | null>(null);
-  const { connections, updateConnection } = useAccounts();
+  const [context, setContext] = useState<GenerationContext | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+  const { connections, reload: reloadConnections } = useAccounts();
   const { addToast } = useToast();
-  
-  // Keep track of timeouts for cleanup
-  const timeoutsRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
 
-  const updateJob = (jobId: string, updates: Partial<Job>) => {
-    setCurrentSession(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        jobs: prev.jobs.map(j => j.id === jobId ? { ...j, ...updates } : j)
-      };
-    });
-  };
+  const sessionIdRef = useRef<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Read inside the poll without making it a dependency.
+  const connectionsRef = useRef(connections);
+  connectionsRef.current = connections;
+  // Output per job id, fetched once each job completes.
+  const resultsRef = useRef<Map<string, ApiResult>>(new Map());
 
-  const simulateJobExecution = (job: Job, sessionPrompt: string, attemptNumber: number = 1) => {
-    // Clear any existing timeout for this job
-    if (timeoutsRef.current[job.id]) {
-      clearTimeout(timeoutsRef.current[job.id]);
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
     }
+  }, []);
 
-    const { status: connStatus } = job.connection;
-    
-    if (connStatus === 'LIMIT_REACHED') {
-      updateJob(job.id, { 
-        status: 'WAITING_FOR_LIMIT',
-        limitResetTime: Date.now() + 1000 * 5 // 5 seconds for fast mock testing
-      });
-      return;
+  const applySession = useCallback((session: ApiSession) => {
+    setCurrentSession(toExecutionSession(session, connectionsRef.current, resultsRef.current));
+    if (session.context) setContext(session.context as GenerationContext);
+    return session;
+  }, []);
+
+  const loadResults = useCallback(async (sessionId: string) => {
+    try {
+      const { items } = await list<ApiResult>('/results', { session: sessionId, limit: 100 });
+      const next = new Map(resultsRef.current);
+      for (const result of items) if (result.job) next.set(String(result.job), result);
+      resultsRef.current = next;
+    } catch (err) {
+      console.error('[execution] could not load results:', (err as Error).message);
     }
-    
-    if (connStatus === 'SESSION_EXPIRED') {
-      updateJob(job.id, { status: 'SESSION_EXPIRED' });
-      return;
+  }, []);
+
+  const poll = useCallback(async () => {
+    const id = sessionIdRef.current;
+    if (!id) return;
+    try {
+      const session = await get<ApiSession>(`/sessions/${id}`);
+      // Pull output for newly finished jobs before rendering, so a card never
+      // shows "complete" with nothing in it.
+      if (session.jobs.some((j) => j.status === 'COMPLETE' && !resultsRef.current.has(j.id))) {
+        await loadResults(id);
+      }
+      applySession(session);
+
+      if (isSessionTerminal(session.status)) {
+        stopPolling();
+        // Costs and limit states move during a run.
+        reloadConnections();
+      }
+    } catch (err) {
+      // A transient blip should not kill the view; the next tick retries.
+      console.error('[execution] poll failed:', (err as Error).message);
     }
+  }, [applySession, stopPolling, reloadConnections, loadResults]);
 
-    if (connStatus === 'API_ERROR' || connStatus === 'OFFLINE') {
-      updateJob(job.id, { 
-        status: 'FAILED',
-        attempts: [...job.attempts.filter(a => a.number !== attemptNumber), { number: attemptNumber, startTime: Date.now(), prompt: attemptNumber > 1 ? 'Auto Fixed' : sessionPrompt, status: 'ERROR' }]
-      });
-      return;
-    }
+  const startPolling = useCallback(() => {
+    stopPolling();
+    pollRef.current = setInterval(poll, POLL_INTERVAL_MS);
+  }, [poll, stopPolling]);
 
-    // Normal execution mock
-    updateJob(job.id, { status: 'GENERATING' });
-    
-    // Simulate some logic based on the provider/connection for demonstration
-    // If it's a specific mock one, let's trigger a violation
-    const isViolationCase = (job.connection.model.includes('Pro') || job.connection.name.includes('Pro')) && attemptNumber === 1;
+  useEffect(() => stopPolling, [stopPolling]);
 
-    timeoutsRef.current[job.id] = setTimeout(() => {
-      if (isViolationCase) {
-        // Trigger Violation Behavior
-        const failedAttempt: Attempt = { 
-          number: attemptNumber, 
-          startTime: job.attempts[job.attempts.length - 1].startTime, 
-          prompt: sessionPrompt, 
-          status: 'VIOLATION' 
+  const startSession = useCallback(
+    async (input: StartSessionInput) => {
+      setIsStarting(true);
+      try {
+        const body: CreateSessionBody = {
+          mode: input.mode as CreateSessionBody['mode'],
+          prompt: input.prompt,
+          connectionIds: input.connectionIds,
+          ...(input.projectId ? { project: input.projectId } : {}),
+          ...(input.personaId ? { persona: input.personaId } : {}),
+          ...(input.styleId ? { style: input.styleId } : {}),
+          ...(input.referenceIds?.length ? { referenceIds: input.referenceIds } : {}),
+          ...(input.options ? { options: input.options } : {}),
+          ...(input.agentTargets && Object.keys(input.agentTargets).length ? { agentTargets: input.agentTargets } : {}),
         };
-        const newAttempt: Attempt = { 
-          number: attemptNumber + 1, 
-          startTime: Date.now(), 
-          prompt: 'যে part-টা violation আসছে ওইটা বাদ দিয়ে generate করো।', 
-          status: 'RUNNING' 
-        };
-        
-        updateJob(job.id, { 
-          status: 'RETRYING', 
-          attempts: [...job.attempts.filter(a => a.number !== attemptNumber), failedAttempt, newAttempt] 
-        });
-        
-        addToast(`Violation detected on ${job.connection.name}. Auto-recovering...`, 'WARNING');
 
-        // Schedule the retry success
-        timeoutsRef.current[job.id] = setTimeout(() => {
-          updateJob(job.id, { status: 'GENERATING' });
-          timeoutsRef.current[job.id] = setTimeout(() => {
-            const completedAttempt: Attempt = { ...newAttempt, status: 'COMPLETE', duration: 4.5 };
-            updateJob(job.id, { 
-              status: 'COMPLETE', 
-              duration: 8.2, 
-              attempts: [...job.attempts.filter(a => a.number !== attemptNumber), failedAttempt, completedAttempt] 
-            });
-          }, 4500);
-        }, 2000);
-        
-      } else {
-        // Success
-        const successAttempt: Attempt = { 
-          number: attemptNumber, 
-          startTime: job.attempts[job.attempts.length - 1].startTime, 
-          prompt: attemptNumber > 1 ? 'Auto Fixed' : sessionPrompt, 
-          status: 'COMPLETE',
-          duration: 3.5
-        };
-        updateJob(job.id, { 
-          status: 'COMPLETE', 
-          duration: 3.5,
-          attempts: [...job.attempts.filter(a => a.number !== attemptNumber), successAttempt]
-        });
+        resultsRef.current = new Map();
+        const session = await post<ApiSession>('/sessions', body);
+        sessionIdRef.current = session.id;
+        applySession(session);
+        startPolling();
+      } catch (err) {
+        addToast((err as Error).message, 'ERROR');
+        throw err;
+      } finally {
+        setIsStarting(false);
       }
-    }, 3000);
-  };
+    },
+    [applySession, startPolling, addToast]
+  );
 
-  const startSession = (mode: Capability, prompt: string, selectedConnections: SmashConnection[]) => {
-    const initialJobs: Job[] = selectedConnections.map((conn, idx) => {
-      return {
-        id: `job_${Date.now()}_${idx}`,
-        connection: conn,
-        status: 'QUEUED',
-        attempts: [{ number: 1, startTime: Date.now(), prompt, status: 'RUNNING' }],
-      };
-    });
-
-    const newSession: ExecutionSession = {
-      id: `SM-${mode.substring(0,3)}-${Date.now()}`,
-      mode,
-      prompt,
-      startTime: Date.now(),
-      status: 'RUNNING',
-      jobs: initialJobs,
-      events: []
-    };
-
-    setCurrentSession(newSession);
-
-    // Start jobs slightly staggered
-    initialJobs.forEach((job, index) => {
-      timeoutsRef.current[job.id] = setTimeout(() => {
-        simulateJobExecution(job, prompt, 1);
-      }, index * 500);
-    });
-  };
-
-  const handleJobAction = (action: string, jobId: string) => {
-    if (!currentSession) return;
-    const job = currentSession.jobs.find(j => j.id === jobId);
-    if (!job) return;
-
-    if (action === 'STOP' || action === 'STOP_RETRY') {
-      if (timeoutsRef.current[jobId]) clearTimeout(timeoutsRef.current[jobId]);
-      updateJob(jobId, { status: 'STOPPED' });
-    }
-    
-    if (action === 'RETRY' || action === 'RESUME') {
-      const nextAttemptNum = job.attempts.length + 1;
-      updateJob(jobId, { 
-        status: 'QUEUED',
-        attempts: [...job.attempts, { number: nextAttemptNum, startTime: Date.now(), prompt: currentSession.prompt, status: 'RUNNING' }]
-      });
-      simulateJobExecution(job, currentSession.prompt, nextAttemptNum);
-    }
-
-    if (action === 'USE_FALLBACK') {
-      const fallbackId = job.connection.fallbackId;
-      if (fallbackId) {
-        const fallbackConn = connections.find(c => c.id === fallbackId);
-        if (fallbackConn) {
-          updateJob(jobId, {
-            connection: fallbackConn,
-            status: 'QUEUED',
-            attempts: [...job.attempts, { number: job.attempts.length + 1, startTime: Date.now(), prompt: currentSession.prompt, status: 'RUNNING' }]
-          });
-          simulateJobExecution({ ...job, connection: fallbackConn }, currentSession.prompt, job.attempts.length + 1);
-          addToast(`Switched to fallback connection: ${fallbackConn.name}`, 'INFO');
-        } else {
-           addToast('Fallback connection not found.', 'ERROR');
-        }
-      } else {
-        addToast('No fallback configured for this connection.', 'WARNING');
+  /** All seven server-side job actions go through one endpoint. */
+  const handleJobAction = useCallback(
+    async (action: string, jobId: string) => {
+      const id = sessionIdRef.current;
+      if (!id) return;
+      try {
+        await post(`/sessions/${id}/jobs/${jobId}/actions`, { action });
+        await poll();
+        startPolling();
+      } catch (err) {
+        addToast((err as Error).message, 'ERROR');
       }
-    }
+    },
+    [poll, startPolling, addToast]
+  );
 
-    if (action === 'OPEN_SESSION') {
-       addToast(`Opening secure session for ${job.connection.name}...`, 'INFO');
-       setTimeout(() => {
-         // Simulate successful re-login
-         updateJob(jobId, { status: 'QUEUED' });
-         // Create a mock active connection so we can bypass SESSION_EXPIRED
-         const activeConn = { ...job.connection, status: 'ACTIVE' as any };
-         simulateJobExecution({ ...job, connection: activeConn }, currentSession.prompt, job.attempts.length + 1);
-         addToast(`Session restored. Resuming...`, 'SUCCESS');
-       }, 2000);
-    }
-    
-    if (action === 'NOTIFY_ACTIVE') {
-      addToast(`Limit reset for ${job.connection.name}. Auto-resuming...`, 'SUCCESS');
-      const nextAttemptNum = job.attempts.length + 1;
-      updateJob(jobId, { 
-        status: 'QUEUED',
-        limitResetTime: undefined,
-        attempts: [...job.attempts, { number: nextAttemptNum, startTime: Date.now(), prompt: currentSession.prompt, status: 'RUNNING' }]
-      });
-      // Mock an active connection to bypass the LIMIT check
-      const activeConn = { ...job.connection, status: 'ACTIVE' as any };
-      simulateJobExecution({ ...job, connection: activeConn }, currentSession.prompt, nextAttemptNum);
-    }
-  };
-
-  const stopSession = () => {
-    if (!currentSession) return;
-    Object.values(timeoutsRef.current).forEach(clearTimeout);
-    timeoutsRef.current = {};
-    setCurrentSession(prev => prev ? { ...prev, status: 'STOPPED' } : null);
-    currentSession.jobs.forEach(j => {
-      if (['QUEUED', 'STARTING', 'GENERATING', 'PROCESSING', 'RETRYING'].includes(j.status)) {
-        updateJob(j.id, { status: 'STOPPED' });
+  const sessionCommand = useCallback(
+    async (command: 'stop' | 'pause' | 'resume') => {
+      const id = sessionIdRef.current;
+      if (!id) return;
+      try {
+        const session = await post<ApiSession>(`/sessions/${id}/${command}`);
+        applySession(session);
+        if (command === 'resume') startPolling();
+        else if (isSessionTerminal(session.status)) stopPolling();
+      } catch (err) {
+        addToast((err as Error).message, 'ERROR');
       }
-    });
-  };
+    },
+    [applySession, startPolling, stopPolling, addToast]
+  );
 
-  const pauseSession = () => {
-    if (!currentSession) return;
-    setCurrentSession(prev => prev ? { ...prev, status: 'PAUSED' } : null);
-    currentSession.jobs.forEach(j => {
-      if (['QUEUED', 'STARTING', 'GENERATING', 'PROCESSING', 'RETRYING'].includes(j.status)) {
-         if (timeoutsRef.current[j.id]) clearTimeout(timeoutsRef.current[j.id]);
-         updateJob(j.id, { status: 'PAUSED' });
-      }
-    });
-  };
-
-  const resumeSession = () => {
-    if (!currentSession) return;
-    setCurrentSession(prev => prev ? { ...prev, status: 'RUNNING' } : null);
-    currentSession.jobs.forEach(j => {
-      if (j.status === 'PAUSED') {
-         updateJob(j.id, { status: 'QUEUED' });
-         simulateJobExecution(j, currentSession.prompt, j.attempts.length);
-      }
-    });
-  };
-
-  const clearSession = () => {
-    Object.values(timeoutsRef.current).forEach(clearTimeout);
-    timeoutsRef.current = {};
+  const clearSession = useCallback(() => {
+    stopPolling();
+    sessionIdRef.current = null;
+    resultsRef.current = new Map();
     setCurrentSession(null);
-  };
+    setContext(null);
+  }, [stopPolling]);
 
   return (
-    <ExecutionContext.Provider value={{
-      currentSession,
-      startSession,
-      updateJob,
-      handleJobAction,
-      stopSession,
-      pauseSession,
-      resumeSession,
-      clearSession
-    }}>
+    <ExecutionContext.Provider
+      value={{
+        currentSession,
+        context,
+        isStarting,
+        startSession,
+        handleJobAction,
+        stopSession: () => sessionCommand('stop'),
+        pauseSession: () => sessionCommand('pause'),
+        resumeSession: () => sessionCommand('resume'),
+        clearSession,
+      }}
+    >
       {children}
     </ExecutionContext.Provider>
   );
@@ -277,6 +281,8 @@ export const ExecutionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
 export const useExecution = () => {
   const context = useContext(ExecutionContext);
-  if (!context) throw new Error('useExecution must be used within ExecutionProvider');
+  if (context === undefined) {
+    throw new Error('useExecution must be used within an ExecutionProvider');
+  }
   return context;
 };

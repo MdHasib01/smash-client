@@ -6,16 +6,35 @@ import { Card } from '../components/ui/Card';
 import { ConnectionCard } from '../components/accounts/ConnectionCard';
 import { AccountInspector } from '../components/accounts/AccountInspector';
 import { AddConnectionModal } from '../components/accounts/AddConnectionModal';
-import { ConnectionModel } from '../types/accounts';
+import { AgentToolsPanel } from '../components/accounts/AgentToolsPanel';
+import { useToast } from '../contexts/ToastContext';
 import { useGlobalUI } from '../contexts/GlobalUIContext';
 import { useAccounts, SmashConnection } from '../contexts/AccountsContext';
 import { Plus, RefreshCcw, Activity, Search, LayoutGrid, List } from 'lucide-react';
 
 export const AccountsCenter: React.FC = () => {
   const { setInspectorContent, setInspectorTitle, setInspectorOpen } = useGlobalUI();
-  const { connections } = useAccounts();
+  const { connections: allConnections, reload, testConnection, isLoading } = useAccounts();
+  const { addToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const query = searchQuery.trim().toLowerCase();
+  const connections = query
+    ? allConnections.filter((c) =>
+        [c.name, c.provider, c.model].some((field) => String(field ?? '').toLowerCase().includes(query))
+      )
+    : allConnections;
+
+  const handleTestAll = async () => {
+    setIsTesting(true);
+    const enabled = allConnections.filter((c) => c.enabled);
+    const results = await Promise.allSettled(enabled.map((c) => testConnection(c.id)));
+    const reachable = results.filter((r) => r.status === 'fulfilled' && r.value?.reachable).length;
+    addToast(`Checked ${enabled.length} connection(s)`, 'INFO', `${reachable} reachable`);
+    setIsTesting(false);
+  };
 
   // Derived Stats
   const total = connections.length;
@@ -49,8 +68,8 @@ export const AccountsCenter: React.FC = () => {
       secondaryToolbar={
         <div className="flex w-full justify-between items-center">
           <div className="flex gap-2">
-            <Button variant="secondary" size="sm"><Activity size={14} className="mr-2"/> Test Connections</Button>
-            <Button variant="ghost" size="sm"><RefreshCcw size={14} className="mr-2"/> Refresh All</Button>
+            <Button variant="secondary" size="sm" onClick={handleTestAll} isLoading={isTesting}><Activity size={14} className="mr-2"/> Test Connections</Button>
+            <Button variant="ghost" size="sm" onClick={() => reload()} disabled={isLoading}><RefreshCcw size={14} className="mr-2"/> Refresh All</Button>
           </div>
           <div className="flex items-center gap-4">
             <Input 
@@ -94,8 +113,9 @@ export const AccountsCenter: React.FC = () => {
           </Card>
         </div>
 
-        {/* Grouped Grid View */}
-        <div className="flex flex-col gap-10">
+        {/* Connections, with the read-only Agent Tools panel alongside */}
+        <div className="flex flex-col xl:flex-row gap-8 items-start">
+        <div className="flex-1 min-w-0 flex flex-col gap-10">
           {Object.entries(groupedConnections as Record<string, SmashConnection[]>).map(([provider, providerConns]) => (
             <div key={provider} className="flex flex-col gap-4">
               <div className="flex items-center gap-3">
@@ -103,7 +123,7 @@ export const AccountsCenter: React.FC = () => {
                 <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
                 <span className="text-[10px] font-bold text-smash-text-secondary">{(providerConns as SmashConnection[]).length} Connections</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
                 {(providerConns as SmashConnection[]).map(conn => (
                   <ConnectionCard 
                     key={conn.id} 
@@ -114,6 +134,14 @@ export const AccountsCenter: React.FC = () => {
               </div>
             </div>
           ))}
+          {!connections.length && (
+            <p className="text-sm text-smash-text-tertiary">{query ? 'No connections match your search.' : 'No connections yet.'}</p>
+          )}
+        </div>
+
+        <aside className="w-full xl:w-80 shrink-0 xl:sticky xl:top-4">
+          <AgentToolsPanel />
+        </aside>
         </div>
 
       </div>

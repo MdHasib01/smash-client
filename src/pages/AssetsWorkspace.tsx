@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BrandOptions } from '../components/brands/BrandOptions';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Button } from '../components/ui/Button';
 import { Search, Plus, Filter, Folder, Image as ImageIcon, Video, Type, AudioLines, FileText, Bookmark, Star, MoreVertical } from 'lucide-react';
@@ -34,9 +35,7 @@ export const AssetsWorkspace: React.FC = () => {
                 onChange={(e) => setActiveProject(e.target.value)}
                 className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-[#D946EF]/50 appearance-none min-w-[140px]"
               >
-                <option value="Milkimom">Milkimom</option>
-                <option value="Baby Herbs">Baby Herbs</option>
-                <option value="Personal">Personal</option>
+                <BrandOptions />
               </select>
             </div>
             
