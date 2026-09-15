@@ -80,19 +80,39 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   const agentClis = tools?.agents?.length ? tools.agents : (tools?.clis ?? []).map((cli) => ({ cli, label: cli }));
   const defaultCli = tools?.defaults?.cli ?? agentClis[0]?.cli;
 
-  /** The choice shown for a connection: this run's pick, else its configured model, else the agent default. */
+  /** "codex:gpt-5.6-sol" -> ['codex', 'gpt-5.6-sol']; the model may itself contain ':'. */
+  const splitConnModel = (conn: SmashConnection) => {
+    const raw = String(conn.model ?? '').trim();
+    const at = raw.indexOf(':');
+    return at === -1 ? [raw, ''] : [raw.slice(0, at), raw.slice(at + 1)];
+  };
+
+  /**
+   * A model only belongs to its own CLI (mirrors the server's resolveAgentTarget):
+   * the connection's model for the connection's CLI, the server default for the
+   * default CLI, otherwise the CLI's own default.
+   */
+  const defaultModelFor = (conn: SmashConnection, cli: string) => {
+    const [connCli, connModel] = splitConnModel(conn);
+    if (cli === connCli && connModel) return connModel;
+    if (cli === tools?.defaults?.cli && tools?.defaults?.model) return tools.defaults.model;
+    return 'default';
+  };
+
+  /** The choice shown for a connection: this run's pick, else its configured CLI, else the agent default. */
   const targetFor = (conn: SmashConnection): Required<AgentTarget> => {
-    const [connCli, connModel] = String(conn.model ?? '').split(':');
+    const [connCli] = splitConnModel(conn);
     const picked = agentTargets[conn.id] ?? {};
     const cliKnown = (cli?: string) => cli && agentClis.some((a) => a.cli === cli);
     const cli = (cliKnown(picked.cli) && picked.cli) || (cliKnown(connCli) && connCli) || defaultCli || '';
-    return { cli, model: picked.model || connModel || tools?.defaults?.model || 'default' };
+    return { cli, model: (picked.cli === cli && picked.model) || defaultModelFor(conn, cli) };
   };
 
   const toggle = (conn: SmashConnection) => {
     if (!isReady(conn)) return;
-    // Pin down exactly what is shown, so the run uses what the user sees.
-    if (isNodeAgent(conn) && !selectedIds.includes(conn.id) && !agentTargets[conn.id]) {
+    // Pin down exactly what is shown, so the run uses what the user sees. Not
+    // before the agent list has loaded - that would pin an empty choice.
+    if (isNodeAgent(conn) && agentClis.length && !selectedIds.includes(conn.id) && !agentTargets[conn.id]) {
       onAgentTargetChange(conn.id, targetFor(conn));
     }
     onSelectToggle(conn.id);
@@ -179,7 +199,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                 disabled={!agentClis.length}
                 onChange={(e) =>
                   // A different CLI has a different model catalogue - reset to its default.
-                  onAgentTargetChange(conn.id, { cli: e.target.value, model: 'default' })
+                  onAgentTargetChange(conn.id, { cli: e.target.value, model: defaultModelFor(conn, e.target.value) })
                 }
               >
                 {!agentClis.length && <option value="">{toolsLoading ? 'Loading…' : 'None allowed'}</option>}

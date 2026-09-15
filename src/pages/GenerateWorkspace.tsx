@@ -232,6 +232,8 @@ export const GenerateWorkspace: React.FC = () => {
                           selectedIds={selectedModelIds}
                           onSelectToggle={handleSelectToggle}
                           onSelectAll={setSelectedModelIds}
+                          agentTargets={agentTargets}
+                          onAgentTargetChange={setAgentTarget}
                         />
                       </div>
                     </motion.div>
