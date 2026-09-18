@@ -139,9 +139,11 @@ export const LiveExecution: React.FC<LiveExecutionProps> = ({ jobs, mode, onCanc
               }
 
               return (
-                <JobCard 
-                  key={job.id} 
-                  job={job} 
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  mode={mode}
+                  events={currentSession?.events}
                   onAction={onAction || (() => {})} 
                   onClick={onJobClick || (() => {})} 
                 />

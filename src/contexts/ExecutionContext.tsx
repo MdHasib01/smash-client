@@ -93,8 +93,11 @@ function toExecutionSession(
       styleName: job.context?.styleName,
       target: job.target,
       error: job.error,
+      log: (job.log ?? []).map((line) => ({ time: toMillis(line.time), text: line.text })),
       attempts: (job.attempts ?? []).map((attempt: any) => ({
         number: attempt.number,
+        kind: attempt.kind,
+        error: attempt.error,
         startTime: toMillis(attempt.startTime),
         prompt: attempt.prompt ?? session.prompt,
         status: attempt.status,

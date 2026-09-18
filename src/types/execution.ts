@@ -7,10 +7,17 @@ export type EventType = 'INFO' | 'SUCCESS' | 'WARNING' | 'CRITICAL';
 
 export interface Attempt {
   number: number;
+  kind?: string;
   startTime: number;
   prompt: string;
   status: 'RUNNING' | 'VIOLATION' | 'ERROR' | 'COMPLETE';
   duration?: number;
+  error?: string;
+}
+
+export interface JobLogLine {
+  time: number;
+  text: string;
 }
 
 export interface SessionEvent {
@@ -38,6 +45,8 @@ export interface Job {
   /** The node-agent CLI/model this job ran on, if any. */
   target?: { cli?: string; model?: string };
   error?: string;
+  /** Live provider transcript, streamed while the job runs. */
+  log?: JobLogLine[];
   limitResetTime?: number;
   autoResume?: boolean;
 }

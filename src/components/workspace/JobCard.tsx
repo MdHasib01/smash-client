@@ -1,21 +1,67 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Job } from '../../types/execution';
+import { Job, SessionEvent } from '../../types/execution';
 import { StatusIndicator } from '../ui/StatusIndicator';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { cn } from '../../lib/utils';
-import { ExternalLink, RefreshCcw, XCircle, AlertTriangle, Clock } from 'lucide-react';
+import { ExternalLink, RefreshCcw, XCircle, AlertTriangle, Clock, StopCircle, Cpu } from 'lucide-react';
+import { AgentTerminal, TerminalLine } from './AgentTerminal';
+import { GenerationStage } from './GenerationStage';
 
 interface JobCardProps {
   job: Job;
+  mode: string;
+  /** Session events: this job's own plus session-wide ones feed the terminal. */
+  events?: SessionEvent[];
   onAction: (action: string, jobId: string) => void;
   onClick: (jobId: string) => void;
 }
 
-export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
+const MAX_TERMINAL_LINES = 200;
+
+/** Session events and the provider transcript, merged in time order. */
+function terminalLines(job: Job, events: SessionEvent[]): TerminalLine[] {
+  const system: TerminalLine[] = events
+    .filter((e) => !e.jobId || e.jobId === job.id)
+    .map((e) => ({ key: `e-${e.id}`, time: e.time, text: e.message, source: 'system', tone: e.type }));
+
+  // The server trims the oldest lines, so keys come from content, not position.
+  const seen = new Map<string, number>();
+  const agent: TerminalLine[] = (job.log ?? []).map((line) => {
+    const base = `${line.time}|${line.text}`;
+    const n = (seen.get(base) ?? 0) + 1;
+    seen.set(base, n);
+    return { key: `l-${base}-${n}`, time: line.time, text: line.text, source: 'agent' };
+  });
+
+  return [...system, ...agent].sort((a, b) => a.time - b.time).slice(-MAX_TERMINAL_LINES);
+}
+
+/** Which pipeline step the job is on, read from its status and transcript. */
+function currentPhase(job: Job, lines: TerminalLine[]): { step: number; label: string } {
+  if (job.status === 'RETRYING') return { step: 2, label: `Retrying · attempt ${job.attempts.length}` };
+
+  if (job.status === 'QUEUED' || job.status === 'STARTING') {
+    const refining = [...lines].reverse().find((l) => l.source === 'system' && /refin|assembled prompt/i.test(l.text));
+    if (refining && /^Refining/i.test(refining.text)) return { step: 1, label: 'Refining prompt' };
+    return { step: 0, label: 'In queue' };
+  }
+
+  // Only lines from the current attempt count.
+  let marker = 0;
+  lines.forEach((l, i) => {
+    if (l.text.startsWith('── attempt')) marker = i;
+  });
+  const recent = lines.slice(marker).filter((l) => l.source === 'agent');
+  if (recent.some((l) => /fetching|stored in the Smash gallery/i.test(l.text))) return { step: 4, label: 'Saving image' };
+  const cliSpoke = recent.some((l) => !/^(\$|▸ connecting|──|…)/.test(l.text.trim()));
+  if (cliSpoke) return { step: 3, label: job.connection.type === 'API' ? 'Generating' : 'Agent at work' };
+  return { step: 2, label: 'Handing to agent' };
+}
+
+export const JobCard: React.FC<JobCardProps> = ({ job, mode, events = [], onAction, onClick }) => {
   const [timeLeft, setTimeLeft] = useState<string>('');
-  const [elapsed, setElapsed] = useState<string>('0s');
   const [hasNotifiedActive, setHasNotifiedActive] = useState<boolean>(false);
 
   // Limit Countdown Logic
@@ -43,51 +89,48 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
     }
   }, [job.status, job.limitResetTime, hasNotifiedActive, onAction, job.id]);
 
-  // Elapsed Timer Logic
   const isActive = ['QUEUED', 'STARTING', 'GENERATING', 'PROCESSING', 'RETRYING'].includes(job.status);
-  
-  useEffect(() => {
-    if (isActive) {
-      const interval = setInterval(() => {
-        const currentAttempt = job.attempts[job.attempts.length - 1];
-        if (currentAttempt) {
-          const diff = Date.now() - currentAttempt.startTime;
-          setElapsed(`${(diff / 1000).toFixed(1)}s`);
-        }
-      }, 100);
-      return () => clearInterval(interval);
-    } else if (job.duration) {
-      setElapsed(`${job.duration.toFixed(1)}s`);
-    }
-  }, [isActive, job.attempts, job.duration]);
+  const lines = useMemo(() => terminalLines(job, events), [job, events]);
+  const phase = currentPhase(job, lines);
+  const attempt = job.attempts[job.attempts.length - 1];
+  const previous = job.attempts[job.attempts.length - 2];
 
   const renderActiveState = () => (
-    <div className="flex flex-col items-center justify-center gap-4 h-full">
-      <div className="flex justify-between w-full px-2 text-[10px] font-bold text-smash-text-secondary uppercase tracking-widest">
-        <span>Attempt {job.attempts.length}</span>
-        <span className="text-white">{elapsed}</span>
-      </div>
-      <div className="relative w-full h-1 bg-white/5 rounded-full overflow-hidden">
-        <motion.div 
-          className={cn("absolute top-0 left-0 bottom-0", job.status === 'RETRYING' ? "bg-rose-500" : "bg-[#D946EF]")}
-          animate={{ left: ['-20%', '100%'], width: ['20%', '20%'] }}
-          transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-        />
-      </div>
-      {job.status === 'RETRYING' && (
-        <div className="flex flex-col gap-2 w-full mt-2">
-          <div className="text-[10px] font-bold uppercase text-rose-400 text-center tracking-widest bg-rose-500/10 px-3 py-2 rounded-lg border border-rose-500/20">
-            Violation Detected.<br/>
-            <span className="text-white normal-case font-bold opacity-80 mt-1 block">
-              Auto Command: "যে part-টা violation আসছে ওইটা বাদ দিয়ে generate করো।"
-            </span>
-          </div>
-          <Button variant="danger" size="sm" className="w-full text-[9px] h-7" onClick={(e) => { e.stopPropagation(); onAction('STOP_RETRY', job.id) }}>STOP RETRY</Button>
+    <div className="flex flex-col gap-3">
+      <GenerationStage
+        step={phase.step}
+        label={phase.label}
+        startTime={attempt?.startTime ?? Date.now()}
+        mode={mode}
+        retrying={job.status === 'RETRYING'}
+      />
+
+      {job.status === 'RETRYING' && previous?.error && (
+        <div className="text-[10px] text-rose-200/90 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2 leading-relaxed">
+          <span className="font-bold uppercase tracking-widest text-rose-400 mr-1.5">
+            {previous.status === 'VIOLATION' ? 'Policy block' : 'Previous attempt failed'}
+          </span>
+          {previous.error}
         </div>
       )}
-      {job.progress !== undefined && (
-        <span className="text-[10px] font-bold tracking-widest uppercase text-[#D946EF]">{job.progress}%</span>
-      )}
+
+      <AgentTerminal lines={lines} live />
+
+      <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-smash-text-tertiary">
+        <span className="flex items-center gap-1.5">
+          <Cpu size={10} />
+          {job.target?.cli ? `${job.target.cli} · ${job.target.model ?? 'default'}` : job.connection.model || job.connection.provider}
+        </span>
+        <button
+          className="flex items-center gap-1 text-smash-text-secondary hover:text-red-400 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAction(job.status === 'RETRYING' ? 'STOP_RETRY' : 'STOP', job.id);
+          }}
+        >
+          <StopCircle size={11} /> {job.status === 'RETRYING' ? 'Stop retry' : 'Stop'}
+        </button>
+      </div>
     </div>
   );
 
@@ -125,12 +168,16 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
   );
   
   const renderFailedState = () => (
-    <div className="flex flex-col items-center justify-center gap-3 h-full p-2">
+    <div className="flex flex-col gap-3 h-full">
       <div className="flex items-center gap-2 text-red-400">
         <XCircle size={16} />
         <span className="text-xs font-bold uppercase tracking-widest">{job.status.replace('_', ' ')}</span>
       </div>
-      <div className="flex gap-2 w-full mt-2">
+      {job.error && (
+        <p className="text-[11px] text-red-200/80 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 break-words">{job.error}</p>
+      )}
+      {lines.length > 0 && <AgentTerminal lines={lines} live={false} />}
+      <div className="flex gap-2 w-full">
         <Button variant="secondary" size="sm" className="flex-1 text-[9px] h-7" onClick={(e) => { e.stopPropagation(); onAction('RETRY', job.id) }}>
           <RefreshCcw size={10} /> RETRY NOW
         </Button>
@@ -157,14 +204,20 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
 
   return (
     <motion.div
-      layout
+      layout="position"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={() => onClick(job.id)}
       className={cn(
         "glass-2 rounded-2xl p-5 flex flex-col gap-4 border transition-all cursor-pointer hover:bg-white/[0.03]",
-        isError ? "border-red-500/20" : isWarning ? "border-rose-500/20" : "border-white/5"
+        isError
+          ? "border-red-500/20"
+          : isWarning
+            ? "border-rose-500/20"
+            : isActive
+              ? "border-white/10"
+              : "border-white/5"
       )}
     >
       <div className="flex justify-between items-start">

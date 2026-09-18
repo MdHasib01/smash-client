@@ -152,6 +152,8 @@ export interface JobSummary {
   context?: GenerationContext;
   target?: AgentTarget;
   attempts: { number: number; kind: string; status: string; error?: string; duration?: number }[];
+  /** Live provider transcript (node-agent CLI output), newest lines last. */
+  log?: { time: string; text: string }[];
 }
 
 export interface SessionEvent {
