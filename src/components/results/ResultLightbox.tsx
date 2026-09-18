@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../ui/dialog';
+import { Badge } from '../ui/Badge';
 import { X, Download, ExternalLink, Copy } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { copyText, downloadUrl, fileNameFor } from '../../lib/download';
@@ -24,13 +25,6 @@ interface ResultLightboxProps {
 export const ResultLightbox: React.FC<ResultLightboxProps> = ({ item, onClose }) => {
   const { addToast } = useToast();
 
-  useEffect(() => {
-    if (!item) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [item, onClose]);
-
   const isVideo = item?.mimeType?.startsWith('video/');
   const isAudio = item?.mimeType?.startsWith('audio/');
 
@@ -40,13 +34,12 @@ export const ResultLightbox: React.FC<ResultLightboxProps> = ({ item, onClose })
   };
 
   return (
-    <AnimatePresence>
+    <Dialog open={!!item} onOpenChange={(open) => { if (!open) onClose(); }}>
       {item && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[150] flex flex-col bg-black/90 backdrop-blur-xl"
+        <DialogContent
+          showCloseButton={false}
+          aria-describedby={undefined}
+          className="inset-0 top-0 left-0 translate-x-0 translate-y-0 w-screen max-w-none sm:max-w-none h-dvh rounded-none border-0 p-0 gap-0 flex flex-col bg-black/90 backdrop-blur-xl shadow-none"
           onClick={onClose}
         >
           <div
@@ -54,40 +47,37 @@ export const ResultLightbox: React.FC<ResultLightboxProps> = ({ item, onClose })
             onClick={(e) => e.stopPropagation()}
           >
             <div className="min-w-0">
-              <h3 className="text-sm font-black text-white truncate">{item.title}</h3>
-              {item.subtitle && <p className="text-xs text-smash-text-secondary truncate">{item.subtitle}</p>}
+              <DialogTitle className="text-sm font-bold text-white truncate">{item.title}</DialogTitle>
+              {item.subtitle && <DialogDescription className="text-xs text-smash-text-secondary truncate">{item.subtitle}</DialogDescription>}
               {item.chips?.length ? (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {item.chips.map((chip) => (
-                    <span
-                      key={chip}
-                      className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-white/10 text-white/80"
-                    >
+                    <Badge key={chip} variant="outline" className="tracking-widest">
                       {chip}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               ) : null}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Button variant="secondary" size="sm" onClick={copy}>
-                <Copy size={13} className="mr-1.5" /> {item.url ? 'Copy URL' : 'Copy'}
+                <Copy size={13} /> {item.url ? 'Copy URL' : 'Copy'}
               </Button>
               {item.url && (
                 <>
                   <Button variant="secondary" size="sm" onClick={() => window.open(item.url, '_blank', 'noopener')}>
-                    <ExternalLink size={13} className="mr-1.5" /> Open
+                    <ExternalLink size={13} /> Open
                   </Button>
                   <Button
                     variant="primary"
                     size="sm"
                     onClick={() => downloadUrl(item.url!, fileNameFor(item.title, item.url))}
                   >
-                    <Download size={13} className="mr-1.5" /> Download
+                    <Download size={13} /> Download
                   </Button>
                 </>
               )}
-              <Button variant="icon" onClick={onClose} className="w-9 h-9" title="Close (Esc)">
+              <Button variant="icon" size="icon-sm" onClick={onClose} className="size-9" title="Close (Esc)" aria-label="Close">
                 <X size={16} />
               </Button>
             </div>
@@ -105,7 +95,7 @@ export const ResultLightbox: React.FC<ResultLightboxProps> = ({ item, onClose })
                 />
               )}
               {!item.url && item.text && (
-                <div className="w-[min(92vw,820px)] max-h-[75vh] overflow-y-auto glass-2 border border-white/10 rounded-3xl p-6 md:p-8 text-sm md:text-base leading-relaxed text-white/90 whitespace-pre-wrap break-words">
+                <div className="w-[min(92vw,820px)] max-h-[75vh] overflow-y-auto glass-2 border border-white/10 rounded-2xl p-6 md:p-8 text-sm md:text-base leading-relaxed text-white/90 whitespace-pre-wrap break-words">
                   {item.text}
                 </div>
               )}
@@ -120,8 +110,8 @@ export const ResultLightbox: React.FC<ResultLightboxProps> = ({ item, onClose })
               </p>
             </div>
           )}
-        </motion.div>
+        </DialogContent>
       )}
-    </AnimatePresence>
+    </Dialog>
   );
 };

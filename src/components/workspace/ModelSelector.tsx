@@ -7,6 +7,11 @@ import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { useAgentTools } from '../../hooks/useAgentTools';
 import { AgentTarget } from '../../types/api';
+import { Checkbox } from '../ui/checkbox';
+import { SelectField } from '../ui/select-field';
+import { Label } from '../ui/label';
+import { Badge } from '../ui/Badge';
+import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 
 interface ModelSelectorProps {
   activeMode: string;
@@ -21,8 +26,7 @@ interface ModelSelectorProps {
 const isReady = (c: SmashConnection) => c.status === 'ACTIVE' || c.status === 'IN_USE';
 const isNodeAgent = (c: SmashConnection) => c.adapter === 'NODE_AGENT';
 
-const selectClass =
-  'w-full bg-black/40 border border-white/10 rounded-lg h-8 px-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#D946EF] [&>option]:bg-black';
+const selectClass = 'bg-black/40 px-2 text-xs';
 
 const getIcon = (type: string) => {
   switch (type) {
@@ -126,15 +130,9 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
     );
   };
 
+  // Display-only: the whole row is the click target.
   const renderCheckbox = (selected: boolean) => (
-    <div
-      className={cn(
-        'w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0',
-        selected ? 'bg-[#D946EF] border-[#D946EF]' : 'border-smash-text-tertiary'
-      )}
-    >
-      {selected && <div className="w-2 h-2 bg-white rounded-sm" />}
-    </div>
+    <Checkbox checked={selected} tabIndex={-1} aria-hidden className="pointer-events-none border-smash-text-tertiary" />
   );
 
   const renderAgentCard = (conn: SmashConnection) => {
@@ -156,8 +154,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         className={cn(
           'p-3 rounded-xl border transition-all flex flex-col gap-3',
           isSelected
-            ? 'glass-3 border-[#D946EF]/50 shadow-[0_0_15px_rgba(217,70,239,0.1)]'
-            : 'glass-3 border-white/10',
+            ? 'bg-[#D946EF]/[0.06] border-[#D946EF]/50 shadow-[0_0_15px_rgba(217,70,239,0.1)]'
+            : 'bg-white/[0.03] border-white/10',
           !available && 'opacity-60'
         )}
       >
@@ -191,47 +189,47 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
-            <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-black uppercase tracking-widest text-smash-text-tertiary">Agent</span>
-              <select
+            <div className="flex flex-col gap-1">
+              <Label className="text-[9px] font-bold uppercase tracking-widest text-smash-text-tertiary">Agent</Label>
+              <SelectField
+                size="sm"
+                aria-label="Agent"
                 className={selectClass}
                 value={target.cli}
                 disabled={!agentClis.length}
-                onChange={(e) =>
+                onValueChange={(v) =>
                   // A different CLI has a different model catalogue - reset to its default.
-                  onAgentTargetChange(conn.id, { cli: e.target.value, model: defaultModelFor(conn, e.target.value) })
+                  onAgentTargetChange(conn.id, { cli: v, model: defaultModelFor(conn, v) })
                 }
-              >
-                {!agentClis.length && <option value="">{toolsLoading ? 'Loading…' : 'None allowed'}</option>}
-                {agentClis.map((a: any) => (
-                  <option key={a.cli} value={a.cli}>
-                    {a.label}
-                    {a.auth === 'unauthenticated' ? ' (signed out)' : a.available === false ? ' (not installed)' : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+                options={[
+                  ...(!agentClis.length ? [{ value: '', label: toolsLoading ? 'Loading…' : 'None allowed' }] : []),
+                  ...agentClis.map((a: any) => ({
+                    value: a.cli,
+                    label: `${a.label}${a.auth === 'unauthenticated' ? ' (signed out)' : a.available === false ? ' (not installed)' : ''}`,
+                  })),
+                ]}
+              />
+            </div>
 
-            <label className="flex flex-col gap-1">
-              <span className="text-[9px] font-black uppercase tracking-widest text-smash-text-tertiary">Model</span>
-              <select
+            <div className="flex flex-col gap-1">
+              <Label className="text-[9px] font-bold uppercase tracking-widest text-smash-text-tertiary">Model</Label>
+              <SelectField
+                size="sm"
+                aria-label="Model"
                 className={selectClass}
                 value={target.model}
                 disabled={!target.cli}
-                onChange={(e) => onAgentTargetChange(conn.id, { cli: target.cli, model: e.target.value })}
-              >
-                {/* Keep "default" and any saved choice selectable even if the catalogue lacks it. */}
-                {!models.some((m) => m.id === 'default') && <option value="default">Default</option>}
-                {target.model !== 'default' && !models.some((m) => m.id === target.model) && (
-                  <option value={target.model}>{target.model}</option>
-                )}
-                {models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label || m.id}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onValueChange={(v) => onAgentTargetChange(conn.id, { cli: target.cli, model: v })}
+                options={[
+                  // Keep "default" and any saved choice selectable even if the catalogue lacks it.
+                  ...(!models.some((m) => m.id === 'default') ? [{ value: 'default', label: 'Default' }] : []),
+                  ...(target.model !== 'default' && !models.some((m) => m.id === target.model)
+                    ? [{ value: target.model, label: target.model }]
+                    : []),
+                  ...models.map((m) => ({ value: m.id, label: m.label || m.id })),
+                ]}
+              />
+            </div>
           </div>
         )}
 
@@ -260,7 +258,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         className={cn(
           'p-3 rounded-xl border transition-all flex flex-col gap-2',
           available ? 'cursor-pointer hover:bg-white/5' : 'opacity-50 cursor-not-allowed',
-          isSelected ? 'glass-3 border-[#D946EF]/50 shadow-[0_0_15px_rgba(217,70,239,0.1)]' : 'glass-3 border-transparent'
+          isSelected ? 'bg-[#D946EF]/[0.06] border-[#D946EF]/50 shadow-[0_0_15px_rgba(217,70,239,0.1)]' : 'glass-3 border-transparent'
         )}
       >
         <div className="flex items-center gap-3">
@@ -289,21 +287,21 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   const nothing = !agentConnections.length && Object.keys(grouped).length === 0;
 
   return (
-    <div className="flex flex-col h-full w-full glass-2 rounded-[32px] border border-white/5 overflow-hidden">
+    <div className="flex flex-col h-full w-full glass-2 rounded-3xl border border-white/5 overflow-hidden">
       <div className="p-4 border-b border-white/5 flex flex-col gap-4 bg-white/[0.02]">
         <div className="flex justify-between items-center">
-          <h3 className="text-sm font-black tracking-tight text-white">Compatible Models</h3>
+          <h3 className="text-sm font-bold tracking-tight text-white">Compatible Models</h3>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-white bg-white/10 px-2 py-1 rounded-md">
+            <Badge variant="outline" className="px-2 py-1">
               {compatibleConnections.length} Total
-            </span>
-            <span className="text-[10px] font-bold text-violet-400 bg-violet-400/10 px-2 py-1 rounded-md hidden sm:block">
+            </Badge>
+            <Badge variant="status" statusColor="connected" className="px-2 py-1 hidden sm:inline-flex">
               {readyCount} Ready
-            </span>
+            </Badge>
             {limitedCount > 0 && (
-              <span className="text-[10px] font-bold text-rose-400 bg-rose-400/10 px-2 py-1 rounded-md hidden sm:block">
+              <Badge variant="status" statusColor="generating" className="px-2 py-1 hidden sm:inline-flex">
                 {limitedCount} Limited
-              </span>
+              </Badge>
             )}
           </div>
         </div>
@@ -320,33 +318,37 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
             <Button
               variant="secondary"
               size="sm"
-              className="h-8 text-[10px] px-3 shrink-0"
+              className="text-[10px] tracking-wider shrink-0"
               onClick={() => onSelectAll(areAllSelected ? [] : allFilteredIds)}
             >
               {areAllSelected ? 'DESELECT ALL' : 'SELECT ALL'}
             </Button>
           </div>
-          <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1">
+          <ToggleGroup
+            type="single"
+            spacing={1}
+            value={filterType}
+            onValueChange={(v) => v && setFilterType(v)}
+            className="w-full justify-start overflow-x-auto no-scrollbar pb-1"
+          >
             {['ALL', 'API', 'BROWSER', 'LOCAL', 'OPEN_SOURCE', 'CUSTOM'].map((t) => (
-              <button
+              <ToggleGroupItem
                 key={t}
-                onClick={() => setFilterType(t)}
-                className={cn(
-                  'px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest whitespace-nowrap transition-colors',
-                  filterType === t ? 'bg-white/10 text-white' : 'text-smash-text-secondary hover:bg-white/5'
-                )}
+                value={t}
+                size="sm"
+                className="h-6 min-w-0 px-2.5 rounded-md text-[9px] font-bold uppercase tracking-widest whitespace-nowrap text-smash-text-secondary"
               >
                 {t === 'ALL' ? 'All Types' : t.replace('_', ' ')}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
         {nothing ? (
           <div className="text-center py-10 opacity-50 flex flex-col items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-white">No Models Found</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white">No Models Found</span>
             <span className="text-xs">No active models support {activeMode} mode.</span>
           </div>
         ) : (
@@ -354,7 +356,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
             {agentConnections.length > 0 && (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between px-1">
-                  <h4 className="text-[10px] font-black tracking-widest uppercase text-[#D946EF]">Node Agent</h4>
+                  <h4 className="text-[10px] font-bold tracking-widest uppercase text-[#D946EF]">Node Agent</h4>
                   <span className="text-[9px] font-bold text-smash-text-tertiary uppercase tracking-widest">
                     {agentClis.length} agent{agentClis.length === 1 ? '' : 's'} allowed
                   </span>
@@ -371,7 +373,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               return (
                 <div key={provider} className="flex flex-col gap-3">
                   <div className="flex items-center justify-between px-1">
-                    <h4 className="text-[10px] font-black tracking-widest uppercase text-smash-text-tertiary">{provider}</h4>
+                    <h4 className="text-[10px] font-bold tracking-widest uppercase text-smash-text-tertiary">{provider}</h4>
                     {providerReadyIds.length > 0 && (
                       <button
                         onClick={() => handleProviderSelect(provider)}

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { BrandOptions } from '../components/brands/BrandOptions';
+import { BrandSelect } from '../components/brands/BrandOptions';
+import { Badge } from '../components/ui/Badge';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Button } from '../components/ui/Button';
 import { Play, Save, Settings, Plus, Network, Cpu, LayoutTemplate, MessageSquare, Download, Activity, Folder, CheckCircle } from 'lucide-react';
@@ -20,17 +21,20 @@ import {
   Handle,
   Position,
   ReactFlowProvider,
-  NodeProps
+  NodeProps,
+  Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 // --- CUSTOM NODES ---
 
-const PromptNode = ({ data, selected }: NodeProps) => (
+type FlowNode = Node<Record<string, any>>;
+
+const PromptNode = ({ data, selected }: NodeProps<FlowNode>) => (
   <div className={cn("glass-2 border-2 rounded-xl p-4 min-w-[240px] transition-all", selected ? "border-[#D946EF] shadow-[0_0_20px_rgba(217,70,239,0.2)]" : "border-white/10", data.executing && "border-[#D946EF] ring-4 ring-[#D946EF]/20")}>
     <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-2">
       <MessageSquare size={14} className={data.executing ? "text-[#D946EF] animate-pulse" : "text-[#D946EF]"} />
-      <span className="text-xs font-black text-white uppercase tracking-widest">Input: Prompt</span>
+      <span className="text-xs font-bold text-white uppercase tracking-widest">Input: Prompt</span>
       {data.completed && <CheckCircle size={14} className="text-violet-400 ml-auto" />}
     </div>
     <div className="text-[10px] text-white/70 bg-black/40 p-2 rounded border border-white/5 h-16 overflow-hidden">
@@ -40,13 +44,13 @@ const PromptNode = ({ data, selected }: NodeProps) => (
   </div>
 );
 
-const MultiAINode = ({ data, selected }: NodeProps) => (
+const MultiAINode = ({ data, selected }: NodeProps<FlowNode>) => (
   <div className={cn("glass-2 border-2 rounded-xl p-4 min-w-[240px] transition-all", selected ? "border-[#D946EF] shadow-[0_0_20px_rgba(217,70,239,0.2)]" : "border-white/10", data.executing && "border-[#D946EF] ring-4 ring-[#D946EF]/20")}>
     <Handle type="target" position={Position.Top} className="w-3 h-3 bg-white border-none" />
     <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
       <div className="flex items-center gap-2">
         <Network size={14} className={data.executing ? "text-[#D946EF] animate-pulse" : "text-[#D946EF]"} />
-        <span className="text-xs font-black text-white uppercase tracking-widest">Multi-AI Batch</span>
+        <span className="text-xs font-bold text-white uppercase tracking-widest">Multi-AI Batch</span>
         {data.completed && <CheckCircle size={14} className="text-violet-400 ml-auto" />}
       </div>
     </div>
@@ -64,13 +68,13 @@ const MultiAINode = ({ data, selected }: NodeProps) => (
   </div>
 );
 
-const JudgeNode = ({ data, selected }: NodeProps) => (
+const JudgeNode = ({ data, selected }: NodeProps<FlowNode>) => (
   <div className={cn("glass-2 border-2 rounded-xl p-4 min-w-[240px] transition-all", selected ? "border-[#D946EF] shadow-[0_0_20px_rgba(217,70,239,0.2)]" : "border-white/10", data.executing && "border-[#D946EF] ring-4 ring-[#D946EF]/20")}>
     <Handle type="target" position={Position.Top} className="w-3 h-3 bg-[#D946EF] border-none" />
     <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
       <div className="flex items-center gap-2">
         <Activity size={14} className={data.executing ? "text-[#D946EF] animate-pulse" : "text-violet-400"} />
-        <span className="text-xs font-black text-white uppercase tracking-widest">AI Judge</span>
+        <span className="text-xs font-bold text-white uppercase tracking-widest">AI Judge</span>
         {data.completed && <CheckCircle size={14} className="text-violet-400 ml-auto" />}
       </div>
     </div>
@@ -84,12 +88,12 @@ const JudgeNode = ({ data, selected }: NodeProps) => (
   </div>
 );
 
-const ExportNode = ({ data, selected }: NodeProps) => (
+const ExportNode = ({ data, selected }: NodeProps<FlowNode>) => (
   <div className={cn("glass-2 border-2 rounded-xl p-4 min-w-[240px] transition-all", selected ? "border-[#D946EF] shadow-[0_0_20px_rgba(217,70,239,0.2)]" : "border-white/10", data.executing && "border-[#D946EF] ring-4 ring-[#D946EF]/20")}>
     <Handle type="target" position={Position.Top} className="w-3 h-3 bg-violet-400 border-none" />
     <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-2">
       <Download size={14} className={data.executing ? "text-[#D946EF] animate-pulse" : "text-rose-400"} />
-      <span className="text-xs font-black text-white uppercase tracking-widest">Export / Save</span>
+      <span className="text-xs font-bold text-white uppercase tracking-widest">Export / Save</span>
       {data.completed && <CheckCircle size={14} className="text-violet-400 ml-auto" />}
     </div>
     <div className="text-[10px] text-white/70 font-bold uppercase tracking-widest text-center py-2">
@@ -98,7 +102,7 @@ const ExportNode = ({ data, selected }: NodeProps) => (
   </div>
 );
 
-const initialNodes = [
+const initialNodes: FlowNode[] = [
   { id: '1', type: 'prompt', position: { x: 250, y: 50 }, data: { prompt: 'Create a premium product ad for Milkimom...' } },
   { id: '2', type: 'multiAI', position: { x: 250, y: 220 }, data: { mode: 'IMAGE', models: 6 } },
   { id: '3', type: 'judge', position: { x: 250, y: 390 }, data: { keepTop: 3 } },
@@ -112,7 +116,7 @@ const initialEdges = [
 ];
 
 const WorkflowBuilder: React.FC = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isRunning, setIsRunning] = useState(false);
   const { toast } = useToast();
@@ -176,12 +180,12 @@ const WorkflowBuilder: React.FC = () => {
         <div className="flex items-center gap-3">
           <LayoutTemplate size={16} className="text-[#D946EF]" />
           <h2 className="text-sm font-bold text-white">Multi-AI Image Battle</h2>
-          <span className="text-[10px] text-smash-text-secondary uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded border border-white/5">v3 CURRENT</span>
+          <Badge variant="outline" className="tracking-widest text-smash-text-secondary">v3 CURRENT</Badge>
         </div>
         <div className="flex items-center gap-3">
            <span className="text-[10px] text-smash-text-secondary uppercase tracking-widest mr-2">Auto-saved 2m ago</span>
-           <Button variant="secondary" size="sm" className="h-8 text-[10px]" disabled={isRunning}><Settings size={14} className="mr-1.5"/> SETTINGS</Button>
-           <Button variant="secondary" size="sm" className="h-8 text-[10px]" disabled={isRunning}><Save size={14} className="mr-1.5"/> SAVE</Button>
+           <Button variant="secondary" size="sm" className="h-8 text-[10px]" disabled={isRunning}><Settings size={14}/> SETTINGS</Button>
+           <Button variant="secondary" size="sm" className="h-8 text-[10px]" disabled={isRunning}><Save size={14}/> SAVE</Button>
            <Button 
             variant="primary" 
             size="sm" 
@@ -189,7 +193,7 @@ const WorkflowBuilder: React.FC = () => {
             onClick={handleTestRun}
             disabled={isRunning}
            >
-            {isRunning ? <Activity size={14} className="mr-1.5 animate-spin"/> : <Play size={14} className="mr-1.5 fill-white"/>}
+            {isRunning ? <Activity size={14} className="animate-spin"/> : <Play size={14} className="fill-white"/>}
             {isRunning ? 'RUNNING...' : 'TEST RUN'}
            </Button>
         </div>
@@ -197,7 +201,7 @@ const WorkflowBuilder: React.FC = () => {
 
       {/* Nodes Panel */}
       <div className="absolute left-6 top-20 z-10 w-48 glass-2 border border-white/10 p-3 rounded-2xl flex flex-col gap-2 max-h-[calc(100%-120px)] overflow-y-auto">
-        <span className="text-[10px] font-black uppercase tracking-widest text-smash-text-secondary mb-1">Add Node</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-smash-text-secondary mb-1">Add Node</span>
         {[
           { icon: <MessageSquare size={14}/>, label: 'INPUT' },
           { icon: <Network size={14}/>, label: 'MULTI-AI' },
@@ -228,7 +232,7 @@ const WorkflowBuilder: React.FC = () => {
         fitView
         className="bg-black/20"
       >
-        <Background color="#ffffff" gap={24} size={1} opacity={0.05} />
+        <Background color="#ffffff" gap={24} size={1} />
         <Controls className="glass-2 border-white/10 fill-white !bottom-6 !left-6" showInteractive={false} />
       </ReactFlow>
     </div>
@@ -245,13 +249,7 @@ export const WorkflowsWorkspace: React.FC = () => {
       secondaryToolbar={
         <div className="flex items-center gap-2">
           <Folder size={14} className="text-smash-text-secondary" />
-          <select 
-            value={activeProject}
-            onChange={(e) => setActiveProject(e.target.value)}
-            className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-[#D946EF]/50 appearance-none min-w-[140px]"
-          >
-            <BrandOptions />
-          </select>
+          <BrandSelect value={activeProject} onValueChange={setActiveProject} />
         </div>
       }
     >

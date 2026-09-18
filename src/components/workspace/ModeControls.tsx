@@ -2,12 +2,13 @@ import React from 'react';
 import { Capability } from '../../types/accounts';
 import { AspectRatio, GenerationOptions } from '../../types/api';
 import { Sliders } from 'lucide-react';
+import { SelectField } from '../ui/select-field';
 
-const selectClass = 'bg-transparent text-sm font-bold text-white border-none outline-none w-full [&>option]:bg-black';
+const selectClass = 'h-8 px-0 border-0 bg-transparent shadow-none text-sm font-semibold text-white hover:border-0 focus-visible:ring-0 data-[state=open]:border-0';
 
 const Tile: React.FC<{ label: string; className?: string; children: React.ReactNode }> = ({ label, className, children }) => (
-  <div className={`glass-3 rounded-xl p-3 flex flex-col gap-2 ${className ?? ''}`}>
-    <span className="text-[10px] font-black uppercase text-smash-text-secondary tracking-widest">{label}</span>
+  <div className={`rounded-xl p-3 flex flex-col gap-1 border border-white/10 bg-white/[0.04] transition-colors hover:border-white/20 focus-within:border-[#D946EF]/50 ${className ?? ''}`}>
+    <span className="text-[10px] font-bold uppercase text-smash-text-secondary tracking-widest">{label}</span>
     {children}
   </div>
 );
@@ -35,9 +36,9 @@ export const ModeControls: React.FC<ModeControlsProps> = ({ mode, options, onCha
   const set = (patch: Partial<GenerationOptions>) => onChange({ ...options, ...patch });
 
   return (
-    <div className="glass-2 rounded-[24px] p-6 border border-white/5">
+    <div className="glass-2 rounded-2xl p-5 md:p-6 border border-white/5">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-black tracking-tight text-white flex items-center gap-2">
+        <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
           <Sliders size={16} className="text-[#D946EF]" /> {mode.charAt(0) + mode.slice(1).toLowerCase()} Settings
         </h3>
       </div>
@@ -46,39 +47,34 @@ export const ModeControls: React.FC<ModeControlsProps> = ({ mode, options, onCha
         {mode === 'IMAGE' && (
           <>
             <Tile label="Aspect Ratio">
-              <select
+              <SelectField
                 className={selectClass}
+                aria-label="Aspect Ratio"
                 value={options.aspectRatio ?? '1:1'}
-                onChange={(e) => set({ aspectRatio: e.target.value as AspectRatio })}
-              >
-                {ASPECT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(v) => set({ aspectRatio: v as AspectRatio })}
+                options={ASPECT_OPTIONS}
+              />
             </Tile>
             <Tile label="Resolution">
-              <select
+              <SelectField
                 className={selectClass}
+                aria-label="Resolution"
                 value={options.resolution ?? 'standard'}
-                onChange={(e) => set({ resolution: e.target.value })}
-              >
-                <option value="standard">Standard</option>
-                <option value="high">High detail</option>
-              </select>
+                onValueChange={(v) => set({ resolution: v })}
+                options={[
+                  { value: 'standard', label: 'Standard' },
+                  { value: 'high', label: 'High detail' },
+                ]}
+              />
             </Tile>
             <Tile label="Outputs per Model">
-              <select
+              <SelectField
                 className={selectClass}
+                aria-label="Outputs per Model"
                 value={options.outputsPerModel ?? 1}
-                onChange={(e) => set({ outputsPerModel: Number(e.target.value) })}
-              >
-                <option value={1}>1 Output</option>
-                <option value={2}>2 Outputs</option>
-                <option value={3}>3 Outputs</option>
-                <option value={4}>4 Outputs</option>
-              </select>
+                onValueChange={(v) => set({ outputsPerModel: Number(v) })}
+                options={[1, 2, 3, 4].map((n) => ({ value: n, label: `${n} Output${n > 1 ? 's' : ''}` }))}
+              />
             </Tile>
           </>
         )}
@@ -86,36 +82,23 @@ export const ModeControls: React.FC<ModeControlsProps> = ({ mode, options, onCha
         {mode === 'VIDEO' && (
           <>
             <Tile label="Aspect Ratio">
-              <select className={selectClass}>
-                <option>16:9 Landscape</option>
-                <option>9:16 Vertical</option>
-                <option>1:1 Square</option>
-              </select>
+              <SelectField className={selectClass} defaultValue="16:9 Landscape" options={['16:9 Landscape', '9:16 Vertical', '1:1 Square'].map((o) => ({ value: o, label: o }))} />
             </Tile>
             <Tile label="Duration">
-              <select className={selectClass}>
-                <option>5 Seconds</option>
-                <option>10 Seconds</option>
-              </select>
+              <SelectField className={selectClass} defaultValue="5 Seconds" options={['5 Seconds', '10 Seconds'].map((o) => ({ value: o, label: o }))} />
             </Tile>
           </>
         )}
 
         {mode === 'TEXT' && (
           <Tile label="Format">
-            <select className={selectClass}>
-              <option>Markdown</option>
-              <option>Plain Text</option>
-            </select>
+            <SelectField className={selectClass} defaultValue="Markdown" options={['Markdown', 'Plain Text'].map((o) => ({ value: o, label: o }))} />
           </Tile>
         )}
 
         {mode === 'AUDIO' && (
           <Tile label="Language">
-            <select className={selectClass}>
-              <option>English (US)</option>
-              <option>Bengali (BD)</option>
-            </select>
+            <SelectField className={selectClass} defaultValue="English (US)" options={['English (US)', 'Bengali (BD)'].map((o) => ({ value: o, label: o }))} />
           </Tile>
         )}
       </div>

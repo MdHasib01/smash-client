@@ -151,7 +151,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ state, label, 
   const content = getStatusContent();
 
   return (
-    <div className={cn("flex items-center gap-2 text-[10px] uppercase font-black tracking-widest", content.color, className)}>
+    <div className={cn("flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest", content.color, className)}>
       {content.icon}
       <span>{label || content.defaultLabel}</span>
     </div>

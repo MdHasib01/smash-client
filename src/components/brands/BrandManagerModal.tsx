@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { X, Plus, Trash2, Check, Pencil } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -7,6 +6,10 @@ import { useBrands } from '../../contexts/BrandsContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Brand } from '../../types/api';
 import { cn } from '../../lib/utils';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '../ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { Label } from '../ui/label';
 
 const SWATCHES = ['#D946EF', '#8B5CF6', '#F43F5E', '#06B6D4', '#10B981', '#F59E0B'];
 
@@ -18,14 +21,13 @@ interface BrandManagerModalProps {
 export const BrandManagerModal: React.FC<BrandManagerModalProps> = ({ isOpen, onClose }) => {
   const { brands, createBrand, updateBrand, deleteBrand } = useBrands();
   const { addToast } = useToast();
+  const confirm = useConfirm();
 
   const [name, setName] = useState('');
   const [color, setColor] = useState(SWATCHES[0]);
   const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
-
-  if (!isOpen) return null;
 
   const handleCreate = async () => {
     const trimmed = name.trim();
@@ -59,7 +61,7 @@ export const BrandManagerModal: React.FC<BrandManagerModalProps> = ({ isOpen, on
   };
 
   const handleDelete = async (brand: Brand) => {
-    if (!window.confirm(`Delete "${brand.name}"? Personas and assets in this brand will lose their home.`)) return;
+    if (!(await confirm({ title: 'Delete brand?', description: `Delete "${brand.name}"? Personas and assets in this brand will lose their home.` }))) return;
     try {
       await deleteBrand(brand.id);
       addToast(`Brand "${brand.name}" deleted`, 'SUCCESS');
@@ -69,29 +71,23 @@ export const BrandManagerModal: React.FC<BrandManagerModalProps> = ({ isOpen, on
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-md"
-      />
-
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative w-full max-w-md max-h-[85vh] flex flex-col glass-1 border border-white/10 rounded-[32px] shadow-2xl shadow-black/50 overflow-hidden"
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        showCloseButton={false}
+        className="flex flex-col gap-0 p-0 overflow-hidden sm:max-w-md max-h-[85vh] rounded-3xl"
       >
         <div className="p-6 pb-4 border-b border-white/5 flex items-start justify-between shrink-0">
           <div>
-            <h2 className="text-lg font-black text-white tracking-tight">Brands</h2>
-            <p className="text-xs text-smash-text-secondary mt-0.5">
+            <DialogTitle className="text-lg font-bold text-white tracking-tight">Brands</DialogTitle>
+            <DialogDescription className="text-xs text-smash-text-secondary mt-0.5">
               Every persona, asset and result belongs to a brand.
-            </p>
+            </DialogDescription>
           </div>
-          <Button variant="icon" onClick={onClose} className="w-8 h-8 glass-3 text-smash-text-secondary hover:text-white">
-            <X size={16} />
-          </Button>
+          <DialogClose asChild>
+            <Button variant="icon" size="icon-sm" aria-label="Close">
+              <X size={16} />
+            </Button>
+          </DialogClose>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
@@ -102,7 +98,7 @@ export const BrandManagerModal: React.FC<BrandManagerModalProps> = ({ isOpen, on
                 className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/10"
               >
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black text-white shrink-0"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold text-white shrink-0"
                   style={{ backgroundColor: brand.color }}
                 >
                   {brand.name.charAt(0).toUpperCase()}
@@ -124,23 +120,37 @@ export const BrandManagerModal: React.FC<BrandManagerModalProps> = ({ isOpen, on
                   <span className="flex-1 text-sm font-bold text-white truncate">{brand.name}</span>
                 )}
 
-                <button
-                  title="Rename"
-                  onClick={() => {
-                    setEditingId(brand.id);
-                    setEditingName(brand.name);
-                  }}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-smash-text-tertiary hover:text-white hover:bg-white/5 transition-colors shrink-0"
-                >
-                  <Pencil size={13} />
-                </button>
-                <button
-                  title="Delete"
-                  onClick={() => handleDelete(brand)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-smash-text-tertiary hover:text-rose-300 hover:bg-white/5 transition-colors shrink-0"
-                >
-                  <Trash2 size={13} />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Rename"
+                      onClick={() => {
+                        setEditingId(brand.id);
+                        setEditingName(brand.name);
+                      }}
+                      className="text-smash-text-tertiary"
+                    >
+                      <Pencil size={13} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Rename</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Delete"
+                      onClick={() => handleDelete(brand)}
+                      className="text-smash-text-tertiary hover:text-rose-300"
+                    >
+                      <Trash2 size={13} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete</TooltipContent>
+                </Tooltip>
               </div>
             ))}
 
@@ -152,9 +162,9 @@ export const BrandManagerModal: React.FC<BrandManagerModalProps> = ({ isOpen, on
           </div>
 
           <div className="pt-4 border-t border-white/5 flex flex-col gap-3">
-            <span className="text-[10px] font-black tracking-widest uppercase text-smash-text-secondary">
+            <Label className="text-[10px] font-bold tracking-widest uppercase text-smash-text-secondary">
               New brand
-            </span>
+            </Label>
 
             <Input
               value={name}
@@ -167,10 +177,11 @@ export const BrandManagerModal: React.FC<BrandManagerModalProps> = ({ isOpen, on
               {SWATCHES.map((swatch) => (
                 <button
                   key={swatch}
+                  aria-label={`Color ${swatch}`}
                   onClick={() => setColor(swatch)}
                   style={{ backgroundColor: swatch }}
                   className={cn(
-                    'w-7 h-7 rounded-lg flex items-center justify-center transition-transform',
+                    'w-7 h-7 rounded-lg flex items-center justify-center transition-transform outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
                     color === swatch ? 'scale-110 ring-2 ring-white/40' : 'hover:scale-105'
                   )}
                 >
@@ -186,12 +197,12 @@ export const BrandManagerModal: React.FC<BrandManagerModalProps> = ({ isOpen, on
                 disabled={!name.trim()}
                 onClick={handleCreate}
               >
-                <Plus size={14} className="mr-1" /> Add
+                <Plus size={14} /> Add
               </Button>
             </div>
           </div>
         </div>
-      </motion.div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

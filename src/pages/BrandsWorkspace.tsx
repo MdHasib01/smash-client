@@ -25,6 +25,10 @@ import { useToast } from '../contexts/ToastContext';
 import { list } from '../lib/api';
 import { Brand, Persona, PersonaKind } from '../types/api';
 import { cn } from '../lib/utils';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { Badge } from '../components/ui/Badge';
+import { Label } from '../components/ui/label';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 
 const SWATCHES = ['#D946EF', '#8B5CF6', '#F43F5E', '#06B6D4', '#10B981', '#F59E0B'];
 
@@ -45,6 +49,7 @@ export const BrandsWorkspace: React.FC = () => {
   const { brands, activeBrand, setActiveBrandId, createBrand, updateBrand, deleteBrand, isLoading } = useBrands();
   const { personas } = usePersonas();
   const { addToast } = useToast();
+  const confirm = useConfirm();
 
   const [resultCounts, setResultCounts] = useState<Record<string, number>>({});
   const [isCreating, setIsCreating] = useState(false);
@@ -79,7 +84,7 @@ export const BrandsWorkspace: React.FC = () => {
     const warning = count
       ? `Delete "${brand.name}"? Its ${count} persona(s) and their results will lose their brand.`
       : `Delete "${brand.name}"?`;
-    if (!window.confirm(warning)) return;
+    if (!(await confirm({ title: 'Delete brand?', description: warning }))) return;
     try {
       await deleteBrand(brand.id);
       addToast(`Brand "${brand.name}" deleted`, 'SUCCESS');
@@ -94,7 +99,7 @@ export const BrandsWorkspace: React.FC = () => {
       description="Each brand keeps its own personas and results. Pick one to work in."
       primaryAction={
         <Button variant="primary" onClick={() => setIsCreating(true)}>
-          <Plus size={16} className="mr-1.5" /> New Brand
+          <Plus size={16} /> New Brand
         </Button>
       }
     >
@@ -115,13 +120,13 @@ export const BrandsWorkspace: React.FC = () => {
           <div className="glass-1 border border-white/5 rounded-3xl p-12 text-center flex flex-col items-center gap-4">
             <Building2 size={32} className="text-smash-text-secondary" />
             <div>
-              <h3 className="text-lg font-black text-white">No brands yet</h3>
+              <h3 className="text-lg font-bold text-white">No brands yet</h3>
               <p className="text-sm text-smash-text-secondary mt-1">
                 Create one for each business or profile you make creative for — Milkimom, Baby Herbs, your own page.
               </p>
             </div>
             <Button variant="primary" onClick={() => setIsCreating(true)}>
-              <Plus size={16} className="mr-1.5" /> New Brand
+              <Plus size={16} /> New Brand
             </Button>
           </div>
         )}
@@ -200,12 +205,12 @@ const BrandForm: React.FC<{
   return (
     <div className="glass-2 border border-[#D946EF]/30 rounded-3xl p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-black tracking-widest uppercase text-smash-text-secondary">
+        <Label className="text-[10px] font-bold tracking-widest uppercase text-smash-text-secondary">
           {initial ? 'Edit brand' : 'New brand'}
-        </span>
-        <button onClick={onCancel} className="text-smash-text-tertiary hover:text-white" title="Cancel">
+        </Label>
+        <Button variant="ghost" size="icon-sm" onClick={onCancel} aria-label="Cancel" title="Cancel">
           <X size={16} />
-        </button>
+        </Button>
       </div>
       <Input
         autoFocus
@@ -227,7 +232,7 @@ const BrandForm: React.FC<{
             onClick={() => setColor(swatch)}
             style={{ backgroundColor: swatch }}
             className={cn(
-              'w-7 h-7 rounded-lg flex items-center justify-center transition-transform',
+              'w-7 h-7 rounded-lg flex items-center justify-center transition-transform outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
               color === swatch ? 'scale-110 ring-2 ring-white/40' : 'hover:scale-105'
             )}
             title={swatch}
@@ -300,7 +305,7 @@ const BrandCard: React.FC<{
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
       className={cn(
-        'glass-2 border rounded-3xl overflow-hidden flex flex-col transition-colors',
+        'glass-2 border rounded-2xl overflow-hidden flex flex-col transition-colors',
         isActive ? 'border-[#D946EF]/40 shadow-[0_0_25px_rgba(217,70,239,0.12)]' : 'border-white/10 hover:border-white/20'
       )}
     >
@@ -310,25 +315,26 @@ const BrandCard: React.FC<{
         {/* Identity */}
         <div className="flex items-start gap-3">
           <div
-            className="w-11 h-11 rounded-2xl flex items-center justify-center text-base font-black text-white shrink-0"
+            className="w-11 h-11 rounded-2xl flex items-center justify-center text-base font-bold text-white shrink-0"
             style={{ backgroundColor: brand.color }}
           >
             {brand.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-black text-white truncate">{brand.name}</h3>
+              <h3 className="text-base font-bold text-white truncate">{brand.name}</h3>
               {isActive ? (
-                <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#D946EF]/15 text-[#D946EF] shrink-0">
+                <Badge variant="status" statusColor="paused" className="text-[9px] tracking-widest px-1.5 shrink-0">
                   Active
-                </span>
+                </Badge>
               ) : (
-                <button
+                <Button
+                  variant="outline"
                   onClick={onActivate}
-                  className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-white/5 text-smash-text-tertiary hover:text-white shrink-0"
+                  className="h-auto rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-smash-text-tertiary hover:text-white shrink-0"
                 >
                   Set active
-                </button>
+                </Button>
               )}
             </div>
             <p className="text-xs text-smash-text-secondary line-clamp-2 mt-0.5">
@@ -336,20 +342,22 @@ const BrandCard: React.FC<{
             </p>
           </div>
           <div className="flex gap-1 shrink-0">
-            <button
-              onClick={() => setIsEditing(true)}
-              title="Edit"
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-smash-text-tertiary hover:text-white hover:bg-white/5"
-            >
-              <Pencil size={13} />
-            </button>
-            <button
-              onClick={onDelete}
-              title="Delete"
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-smash-text-tertiary hover:text-rose-300 hover:bg-white/5"
-            >
-              <Trash2 size={13} />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" onClick={() => setIsEditing(true)} aria-label="Edit" className="text-smash-text-tertiary">
+                  <Pencil size={13} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" onClick={onDelete} aria-label="Delete" className="text-smash-text-tertiary hover:text-rose-300">
+                  <Trash2 size={13} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
@@ -357,9 +365,9 @@ const BrandCard: React.FC<{
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={onPersonas}
-            className="glass-3 rounded-xl p-3 text-left hover:bg-white/5 transition-colors group"
+            className="glass-3 rounded-xl p-3 text-left hover:bg-white/[0.08] hover:border-white/20 transition-colors group outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
           >
-            <span className="text-[9px] font-black uppercase tracking-widest text-smash-text-tertiary flex items-center gap-1">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-smash-text-tertiary flex items-center gap-1">
               <Contact size={10} /> Personas
             </span>
             <span className="text-2xl font-mono font-bold text-white flex items-center justify-between">
@@ -367,8 +375,8 @@ const BrandCard: React.FC<{
               <ChevronRight size={14} className="text-smash-text-tertiary group-hover:text-white" />
             </span>
           </button>
-          <button onClick={onResults} className="glass-3 rounded-xl p-3 text-left hover:bg-white/5 transition-colors group">
-            <span className="text-[9px] font-black uppercase tracking-widest text-smash-text-tertiary flex items-center gap-1">
+          <button onClick={onResults} className="glass-3 rounded-xl p-3 text-left hover:bg-white/[0.08] hover:border-white/20 transition-colors group outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-smash-text-tertiary flex items-center gap-1">
               <Images size={10} /> Results
             </span>
             <span className="text-2xl font-mono font-bold text-white flex items-center justify-between">
@@ -380,7 +388,7 @@ const BrandCard: React.FC<{
 
         {/* Personas of this brand */}
         <div className="flex flex-col gap-2">
-          <span className="text-[9px] font-black uppercase tracking-widest text-smash-text-tertiary">Personas</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-smash-text-tertiary">Personas</span>
           {personas.length ? (
             <div className="flex flex-col gap-1.5">
               {personas.slice(0, 4).map((persona) => {
@@ -405,12 +413,14 @@ const BrandCard: React.FC<{
                         {persona.kind} · {persona.references.length} refs
                       </p>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={() => onUsePersona(persona)}
-                      className="text-[10px] font-bold text-[#D946EF] hover:bg-[#D946EF]/10 px-2 py-1 rounded-lg shrink-0"
+                      className="text-[10px] text-[#D946EF] hover:text-[#D946EF] hover:bg-[#D946EF]/10 shrink-0"
                     >
                       Use
-                    </button>
+                    </Button>
                   </div>
                 );
               })}
@@ -428,13 +438,13 @@ const BrandCard: React.FC<{
         {/* Actions */}
         <div className="flex gap-2 mt-auto pt-3 border-t border-white/5">
           <Button variant="secondary" size="sm" className="flex-1 text-[11px]" onClick={onNewPersona}>
-            <Plus size={13} className="mr-1" /> Persona
+            <Plus size={13} /> Persona
           </Button>
           <Button variant="secondary" size="sm" className="flex-1 text-[11px]" onClick={onResults}>
-            <Images size={13} className="mr-1" /> Results
+            <Images size={13} /> Results
           </Button>
           <Button variant="primary" size="sm" className="flex-1 text-[11px]" onClick={onGenerate}>
-            <Sparkles size={13} className="mr-1" /> Generate
+            <Sparkles size={13} /> Generate
           </Button>
         </div>
       </div>

@@ -9,6 +9,11 @@ import { usePersonas } from '../../contexts/PersonasContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Persona, PersonaKind, ReferenceRole, StylePreset } from '../../types/api';
 import { cn } from '../../lib/utils';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '../ui/dialog';
+import { Label as UiLabel } from '../ui/label';
+import { SelectField } from '../ui/select-field';
+import { Switch } from '../ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 const KINDS: { kind: PersonaKind; icon: typeof Building2; title: string; blurb: string }[] = [
   { kind: 'BRAND', icon: Building2, title: 'Brand', blurb: 'A whole brand — logo, products, tone of voice.' },
@@ -53,7 +58,7 @@ const GUIDELINE_PLACEHOLDER: Record<PersonaKind, string> = {
 };
 
 const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="text-[10px] font-black tracking-widest uppercase text-smash-text-secondary">{children}</span>
+  <UiLabel className="text-[10px] font-bold tracking-widest uppercase text-smash-text-secondary">{children}</UiLabel>
 );
 
 const Field: React.FC<{ label: string; children: React.ReactNode; hint?: string }> = ({ label, children, hint }) => (
@@ -64,8 +69,6 @@ const Field: React.FC<{ label: string; children: React.ReactNode; hint?: string 
   </div>
 );
 
-const selectClass =
-  'w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#D946EF] focus:border-[#D946EF]/50';
 
 interface PersonaEditorProps {
   isOpen: boolean;
@@ -211,38 +214,28 @@ export const PersonaEditor: React.FC<PersonaEditorProps> = ({ isOpen, onClose, p
     return { builtIn, custom };
   }, [styles]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={handleClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-md"
-      />
-
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-2xl max-h-[90vh] flex flex-col glass-1 border border-white/10 rounded-[32px] shadow-2xl shadow-black/50 overflow-hidden"
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent
+        showCloseButton={false}
+        className="flex flex-col gap-0 p-0 overflow-hidden sm:max-w-2xl max-h-[90vh] rounded-3xl"
       >
         {/* Header + progress */}
         <div className="p-6 pb-4 border-b border-white/5 shrink-0">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-lg font-black text-white tracking-tight">
+              <DialogTitle className="text-lg font-bold text-white tracking-tight">
                 {isEditing ? `Edit ${persona?.name}` : 'New Persona'}
-              </h2>
-              <p className="text-xs text-smash-text-secondary mt-0.5">
+              </DialogTitle>
+              <DialogDescription className="text-xs text-smash-text-secondary mt-0.5">
                 A reusable subject that gets injected into every generation.
-              </p>
+              </DialogDescription>
             </div>
-            <Button variant="icon" onClick={handleClose} className="w-8 h-8 glass-3 text-smash-text-secondary hover:text-white">
-              <X size={16} />
-            </Button>
+            <DialogClose asChild>
+              <Button variant="icon" size="icon-sm" aria-label="Close">
+                <X size={16} />
+              </Button>
+            </DialogClose>
           </div>
 
           <div className="flex gap-1.5">
@@ -252,14 +245,14 @@ export const PersonaEditor: React.FC<PersonaEditorProps> = ({ isOpen, onClose, p
                 onClick={() => draft && setStep(i)}
                 disabled={!draft && i > 1}
                 className={cn(
-                  'flex-1 flex flex-col gap-1.5 text-left disabled:cursor-not-allowed',
+                  'flex-1 flex flex-col gap-1.5 text-left disabled:cursor-not-allowed outline-none focus-visible:[&>div]:ring-2 focus-visible:[&>div]:ring-ring/50',
                   !draft && i > 1 && 'opacity-40'
                 )}
               >
-                <div className={cn('h-1 rounded-full transition-all', i <= step ? 'bg-[#D946EF]' : 'bg-white/10')} />
+                <div className={cn('h-1 rounded-full transition-all', i <= step ? 'bg-gradient-primary' : 'bg-white/10')} />
                 <span
                   className={cn(
-                    'text-[9px] font-black uppercase tracking-widest',
+                    'text-[9px] font-bold uppercase tracking-widest',
                     i <= step ? 'text-white' : 'text-smash-text-tertiary'
                   )}
                 >
@@ -280,7 +273,7 @@ export const PersonaEditor: React.FC<PersonaEditorProps> = ({ isOpen, onClose, p
                     key={k}
                     onClick={() => setKind(k)}
                     className={cn(
-                      'flex items-start gap-4 p-4 rounded-2xl border text-left transition-all',
+                      'flex items-start gap-4 p-4 rounded-2xl border text-left transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40',
                       kind === k
                         ? 'border-[#D946EF]/50 bg-[#D946EF]/10'
                         : 'border-white/10 bg-white/[0.02] hover:bg-white/5 hover:border-white/20'
@@ -310,14 +303,21 @@ export const PersonaEditor: React.FC<PersonaEditorProps> = ({ isOpen, onClose, p
                 </Field>
 
                 <Field label="Brand" hint="Personas live inside a brand; generations inherit it.">
-                  <select className={selectClass} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-                    <option value="">Select a brand…</option>
-                    {brands.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectField
+                    aria-label="Brand"
+                    value={projectId}
+                    onValueChange={setProjectId}
+                    placeholder="Select a brand…"
+                    options={brands.map((b) => ({
+                      value: b.id,
+                      label: (
+                        <>
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: b.color }} />
+                          {b.name}
+                        </>
+                      ),
+                    }))}
+                  />
                 </Field>
 
                 <Field label="Description" hint="Who or what this is. The model reads this first.">
@@ -396,38 +396,52 @@ export const PersonaEditor: React.FC<PersonaEditorProps> = ({ isOpen, onClose, p
                             className="h-8 text-xs"
                           />
                           <div className="flex gap-2">
-                            <select
-                              className={cn(selectClass, 'h-8 text-xs flex-1')}
-                              value={ref.role}
-                              onChange={(e) => patchReference(ref.id, { role: e.target.value })}
-                            >
-                              {roleOptions.map(({ role }) => (
-                                <option key={role} value={role}>
-                                  {role.replace('_', ' ')}
-                                </option>
-                              ))}
-                            </select>
+                            <div className="flex-1 min-w-0">
+                              <SelectField
+                                size="sm"
+                                aria-label="Role"
+                                className="text-xs"
+                                value={ref.role}
+                                onValueChange={(v) => patchReference(ref.id, { role: v })}
+                                // Keep the saved role selectable even if this kind no longer offers it.
+                                options={[
+                                  ...(roleOptions.some((r) => r.role === ref.role) ? [] : [{ value: ref.role, label: ref.role.replace('_', ' ') }]),
+                                  ...roleOptions.map(({ role }) => ({ value: role, label: role.replace('_', ' ') })),
+                                ]}
+                              />
+                            </div>
 
-                            <button
-                              title="Mark as the main reference for this role"
-                              onClick={() => patchReference(ref.id, { isPrimary: !ref.isPrimary })}
-                              className={cn(
-                                'w-8 h-8 rounded-lg flex items-center justify-center border transition-colors shrink-0',
-                                ref.isPrimary
-                                  ? 'bg-amber-400/15 text-amber-300 border-amber-400/30'
-                                  : 'bg-white/5 text-smash-text-tertiary border-white/10 hover:text-white'
-                              )}
-                            >
-                              <Star size={13} fill={ref.isPrimary ? 'currentColor' : 'none'} />
-                            </button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="icon"
+                                  size="icon-sm"
+                                  aria-label="Mark as the main reference for this role"
+                                  onClick={() => patchReference(ref.id, { isPrimary: !ref.isPrimary })}
+                                  className={cn(
+                                    ref.isPrimary && 'bg-amber-400/15 text-amber-300 border-amber-400/30 hover:bg-amber-400/20 hover:text-amber-300'
+                                  )}
+                                >
+                                  <Star size={13} fill={ref.isPrimary ? 'currentColor' : 'none'} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Mark as the main reference for this role</TooltipContent>
+                            </Tooltip>
 
-                            <button
-                              title="Remove"
-                              onClick={() => dropReference(ref.id)}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 text-smash-text-tertiary border border-white/10 hover:text-rose-300 hover:border-rose-500/30 transition-colors shrink-0"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="icon"
+                                  size="icon-sm"
+                                  aria-label="Remove"
+                                  onClick={() => dropReference(ref.id)}
+                                  className="hover:text-rose-300 hover:border-rose-500/30"
+                                >
+                                  <Trash2 size={13} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Remove</TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
                       </div>
@@ -455,20 +469,15 @@ export const PersonaEditor: React.FC<PersonaEditorProps> = ({ isOpen, onClose, p
                   </div>
                 </Field>
 
-                <label className="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/10 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={refinePrompts}
-                    onChange={(e) => setRefinePrompts(e.target.checked)}
-                    className="mt-0.5 accent-[#D946EF]"
-                  />
-                  <span className="flex flex-col gap-0.5">
+                <label className="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
+                  <span className="flex flex-col gap-0.5 flex-1">
                     <span className="text-sm font-bold text-white">Let the local agent refine prompts</span>
                     <span className="text-xs text-smash-text-secondary">
                       The node agent rewrites the assembled prompt and picks which references matter. Falls back to the
                       assembled prompt if the agent is offline.
                     </span>
                   </span>
+                  <Switch checked={refinePrompts} onCheckedChange={setRefinePrompts} className="mt-0.5" />
                 </label>
               </motion.div>
             )}
@@ -508,8 +517,8 @@ export const PersonaEditor: React.FC<PersonaEditorProps> = ({ isOpen, onClose, p
             )}
           </div>
         </div>
-      </motion.div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -521,7 +530,7 @@ const StyleCard: React.FC<{ style: StylePreset | null; selected: boolean; onSele
   <button
     onClick={onSelect}
     className={cn(
-      'flex flex-col gap-1 p-3 rounded-xl border text-left transition-all',
+      'flex flex-col gap-1 p-3 rounded-xl border text-left transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40',
       selected ? 'border-[#D946EF]/50 bg-[#D946EF]/10' : 'border-white/10 bg-white/[0.02] hover:bg-white/5'
     )}
   >

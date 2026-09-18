@@ -76,7 +76,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
       </div>
       {job.status === 'RETRYING' && (
         <div className="flex flex-col gap-2 w-full mt-2">
-          <div className="text-[10px] font-black uppercase text-rose-400 text-center tracking-widest bg-rose-500/10 px-3 py-2 rounded-lg border border-rose-500/20">
+          <div className="text-[10px] font-bold uppercase text-rose-400 text-center tracking-widest bg-rose-500/10 px-3 py-2 rounded-lg border border-rose-500/20">
             Violation Detected.<br/>
             <span className="text-white normal-case font-bold opacity-80 mt-1 block">
               Auto Command: "যে part-টা violation আসছে ওইটা বাদ দিয়ে generate করো।"
@@ -86,7 +86,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
         </div>
       )}
       {job.progress !== undefined && (
-        <span className="text-[10px] font-black tracking-widest uppercase text-[#D946EF]">{job.progress}%</span>
+        <span className="text-[10px] font-bold tracking-widest uppercase text-[#D946EF]">{job.progress}%</span>
       )}
     </div>
   );
@@ -98,7 +98,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
         <span className="text-xs font-bold uppercase tracking-widest">Limit Reached</span>
       </div>
       <div className="text-center">
-        <div className="text-lg font-black text-white">{timeLeft || 'Checking...'}</div>
+        <div className="text-lg font-bold text-white">{timeLeft || 'Checking...'}</div>
         <div className="text-[10px] text-smash-text-secondary uppercase tracking-widest mt-1">Available Again In</div>
       </div>
       <div className="flex gap-2 w-full mt-2">
@@ -118,7 +118,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
       <p className="text-[10px] text-center text-smash-text-secondary px-4">Browser automation requires re-authentication.</p>
       <div className="flex gap-2 w-full mt-2">
         <Button variant="primary" size="sm" className="flex-1 text-[9px] h-7" onClick={(e) => { e.stopPropagation(); onAction('OPEN_SESSION', job.id) }}>
-          <ExternalLink size={10} className="mr-1" /> OPEN SESSION
+          <ExternalLink size={10} /> OPEN SESSION
         </Button>
       </div>
     </div>
@@ -132,7 +132,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
       </div>
       <div className="flex gap-2 w-full mt-2">
         <Button variant="secondary" size="sm" className="flex-1 text-[9px] h-7" onClick={(e) => { e.stopPropagation(); onAction('RETRY', job.id) }}>
-          <RefreshCcw size={10} className="mr-1" /> RETRY NOW
+          <RefreshCcw size={10} /> RETRY NOW
         </Button>
       </div>
     </div>
@@ -146,7 +146,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
       </div>
       <div className="flex gap-2 w-full mt-2">
         <Button variant="secondary" size="sm" className="flex-1 text-[9px] h-7" onClick={(e) => { e.stopPropagation(); onAction('RESUME', job.id) }}>
-          <RefreshCcw size={10} className="mr-1" /> RESUME
+          <RefreshCcw size={10} /> RESUME
         </Button>
       </div>
     </div>
@@ -163,7 +163,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onAction, onClick }) => {
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={() => onClick(job.id)}
       className={cn(
-        "glass-2 rounded-[24px] p-5 flex flex-col gap-4 border transition-all cursor-pointer hover:bg-white/[0.03]",
+        "glass-2 rounded-2xl p-5 flex flex-col gap-4 border transition-all cursor-pointer hover:bg-white/[0.03]",
         isError ? "border-red-500/20" : isWarning ? "border-rose-500/20" : "border-white/5"
       )}
     >

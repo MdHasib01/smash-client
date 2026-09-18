@@ -16,7 +16,7 @@ export const PromptRevisionBar: React.FC<PromptRevisionBarProps> = ({ onRevise }
       animate={{ opacity: 1, y: 0 }}
       className="sticky bottom-6 mt-8 max-w-4xl mx-auto w-full z-30"
     >
-      <div className="glass-1 backdrop-blur-xl border border-white/10 p-2 rounded-2xl shadow-2xl shadow-black/80 flex items-center gap-2">
+      <div className="glass-1 backdrop-blur-xl border border-white/10 p-2 rounded-2xl shadow-2xl shadow-black/80 flex items-center gap-2 transition-colors focus-within:border-[#D946EF]/40">
         <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
           <History size={18} className="text-smash-text-secondary" />
         </div>
@@ -36,14 +36,14 @@ export const PromptRevisionBar: React.FC<PromptRevisionBarProps> = ({ onRevise }
         <Button 
           variant="primary" 
           size="sm" 
-          className="h-10 px-4 rounded-xl font-bold tracking-tight"
+          className="h-10 px-4 rounded-xl tracking-wide"
           disabled={!revision.trim()}
           onClick={() => {
             onRevise(revision);
             setRevision('');
           }}
         >
-          <Sparkles size={14} className="mr-2" /> REVISE
+          <Sparkles size={14} /> REVISE
         </Button>
       </div>
     </motion.div>

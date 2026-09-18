@@ -70,27 +70,27 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
     return (
       <div className="absolute top-4 right-4 flex gap-2">
         {activeMode === 'IMAGE' && (
-          <div className="glass-3 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-smash-text-secondary border border-white/5 cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
+          <div className="rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-smash-text-secondary border border-white/10 bg-white/5 backdrop-blur-md cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
             <ImageIcon size={14} /> Add Reference
           </div>
         )}
         {activeMode === 'VIDEO' && (
-          <div className="glass-3 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-smash-text-secondary border border-white/5 cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
+          <div className="rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-smash-text-secondary border border-white/10 bg-white/5 backdrop-blur-md cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
             <FileVideo size={14} /> Image/Video Ref
           </div>
         )}
         {activeMode === 'TEXT' && (
           <>
-            <div className="glass-3 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-smash-text-secondary border border-white/5 cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
+            <div className="rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-smash-text-secondary border border-white/10 bg-white/5 backdrop-blur-md cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
               <Link size={14} /> Add URL
             </div>
-            <div className="glass-3 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-smash-text-secondary border border-white/5 cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
+            <div className="rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-smash-text-secondary border border-white/10 bg-white/5 backdrop-blur-md cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
               <FileText size={14} /> Attach File
             </div>
           </>
         )}
          {activeMode === 'AUDIO' && (
-          <div className="glass-3 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-smash-text-secondary border border-white/5 cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
+          <div className="rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-smash-text-secondary border border-white/10 bg-white/5 backdrop-blur-md cursor-pointer hover:bg-white/10 hover:text-white transition-colors">
             <FileAudio size={14} /> Source Audio
           </div>
         )}
@@ -111,12 +111,12 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
 
       {/* Quick Presets */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        <span className="text-[9px] font-black tracking-widest uppercase text-smash-text-tertiary shrink-0 mr-2">Presets:</span>
+        <span className="text-[9px] font-bold tracking-widest uppercase text-smash-text-tertiary shrink-0 mr-2">Presets:</span>
         {getPresets().map(preset => (
           <button 
             key={preset}
             onClick={() => setPrompt(`Generate a ${preset.toLowerCase()} featuring...`)}
-            className="shrink-0 px-3 py-1.5 rounded-lg glass-3 border border-white/5 text-[10px] font-bold text-smash-text-secondary hover:text-white hover:bg-white/10 hover:border-white/20 transition-all"
+            className="shrink-0 px-3 py-1.5 rounded-full border border-white/10 bg-white/[0.04] text-[11px] font-semibold text-smash-text-secondary hover:text-white hover:bg-[#D946EF]/10 hover:border-[#D946EF]/40 transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
           >
             {preset}
           </button>
@@ -124,7 +124,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
       </div>
 
       <div className={cn(
-        "glass-2 rounded-[32px] p-2 transition-all duration-300 border flex flex-col",
+        "glass-2 rounded-3xl p-2 transition-all duration-300 border flex flex-col",
         isFocused ? "border-[#D946EF]/50 shadow-[0_0_30px_rgba(217,70,239,0.15)]" : "border-white/5 shadow-2xl shadow-black/50"
       )}>
         <div className="relative">
@@ -134,7 +134,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={getPlaceholder()}
-            className="min-h-[160px] bg-transparent border-none focus:ring-0 text-lg md:text-xl p-6 placeholder:opacity-30 placeholder:text-white pb-20 resize-none"
+            className="min-h-[160px] bg-transparent border-none shadow-none hover:border-none focus:bg-transparent focus:ring-0 text-lg md:text-xl p-6 placeholder:opacity-30 placeholder:text-white pb-20 resize-none"
           />
           
           {/* Floating Attachments Tray */}
@@ -153,17 +153,17 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
 
           <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
             <div className="flex gap-2">
-              <Button variant="icon" size="sm" className="h-10 w-10 bg-white/5 hover:bg-white/10 rounded-xl">
+              <Button variant="icon" size="icon" className="rounded-xl" aria-label="Attach">
                 <Paperclip size={18} />
               </Button>
-              <Button variant="icon" size="sm" className="h-10 w-10 bg-white/5 hover:bg-white/10 rounded-xl">
+              <Button variant="icon" size="icon" className="rounded-xl" aria-label="Voice input">
                 <Mic size={18} />
               </Button>
             </div>
             
             <div className="hidden lg:flex items-center gap-4">
               <div className="flex flex-col items-end mr-2">
-                <span className="text-[10px] font-black tracking-widest uppercase text-smash-text-secondary">
+                <span className="text-[10px] font-bold tracking-widest uppercase text-smash-text-secondary">
                   {selectedCount} {selectedCount === 1 ? 'Model' : 'Models'} Selected
                 </span>
                 <span className="text-[9px] font-bold text-violet-400 flex items-center gap-1 mt-0.5">
@@ -176,7 +176,7 @@ export const CommandComposer: React.FC<CommandComposerProps> = ({
                 onClick={onRun}
                 disabled={selectedCount === 0 || !prompt.trim() || isRunning}
                 isLoading={isRunning}
-                className="px-8 rounded-xl font-black text-sm tracking-tight h-12 shadow-[0_0_20px_rgba(217,70,239,0.3)] hover:shadow-[0_0_30px_rgba(217,70,239,0.5)]"
+                className="px-8 rounded-xl text-sm tracking-wide"
               >
                 <Sparkles size={16} /> RUN SMASH
               </Button>

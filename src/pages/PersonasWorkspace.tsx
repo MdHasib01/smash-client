@@ -12,6 +12,10 @@ import { usePersonas } from '../contexts/PersonasContext';
 import { useToast } from '../contexts/ToastContext';
 import { Persona, PersonaKind } from '../types/api';
 import { cn } from '../lib/utils';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group';
+import { SelectField } from '../components/ui/select-field';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 
 const KIND_ICON: Record<PersonaKind, typeof Building2> = {
   BRAND: Building2,
@@ -26,6 +30,7 @@ export const PersonasWorkspace: React.FC = () => {
   const { brands } = useBrands();
   const { personas, isLoading, error, deletePersona, duplicatePersona } = usePersonas();
   const { addToast } = useToast();
+  const confirm = useConfirm();
 
   const [filter, setFilter] = useState<PersonaKind | 'ALL'>('ALL');
   const [searchParams] = useSearchParams();
@@ -51,7 +56,7 @@ export const PersonasWorkspace: React.FC = () => {
   };
 
   const handleDelete = async (persona: Persona) => {
-    if (!window.confirm(`Delete "${persona.name}"? Its reference images will be removed too.`)) return;
+    if (!(await confirm({ title: 'Delete persona?', description: `Delete "${persona.name}"? Its reference images will be removed too.` }))) return;
     try {
       await deletePersona(persona.id);
       addToast(`Persona "${persona.name}" deleted`, 'SUCCESS');
@@ -75,38 +80,38 @@ export const PersonasWorkspace: React.FC = () => {
       description="Reusable subjects — a brand, a product, or you and your family — injected into every generation."
       primaryAction={
         <Button variant="primary" onClick={() => openEditor(null)} disabled={!brands.length}>
-          <Plus size={16} className="mr-1.5" /> New Persona
+          <Plus size={16} /> New Persona
         </Button>
       }
       secondaryToolbar={
         <div className="w-full flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 p-1 rounded-xl glass-3 border border-white/5">
+          <ToggleGroup
+            type="single"
+            spacing={1}
+            value={filter}
+            onValueChange={(v) => v && setFilter(v as PersonaKind | 'ALL')}
+            className="p-1 rounded-xl glass-3"
+          >
             {FILTERS.map((f) => (
-              <button
+              <ToggleGroupItem
                 key={f}
-                onClick={() => setFilter(f)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all',
-                  filter === f ? 'bg-white/10 text-white' : 'text-smash-text-tertiary hover:text-white'
-                )}
+                value={f}
+                size="sm"
+                className="h-7 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest text-smash-text-tertiary"
               >
                 {f}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
 
-          <select
+          <SelectField
+            size="sm"
+            aria-label="Brand filter"
             value={brandFilter}
-            onChange={(e) => setBrandFilter(e.target.value)}
-            className="bg-black/40 border border-white/10 rounded-lg h-9 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#D946EF]"
-          >
-            <option value="ALL">All brands</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            onValueChange={setBrandFilter}
+            className="w-auto min-w-[140px] h-9! bg-black/40 text-xs"
+            options={[{ value: 'ALL', label: 'All brands' }, ...brands.map((b) => ({ value: b.id, label: b.name }))]}
+          />
         </div>
       }
     >
@@ -145,7 +150,7 @@ export const PersonasWorkspace: React.FC = () => {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
-                className="glass-2 border border-white/10 rounded-3xl p-4 flex flex-col gap-3 hover:border-white/20 transition-all group"
+                className="glass-2 border border-white/10 rounded-2xl p-4 flex flex-col gap-3 hover:border-white/20 hover:-translate-y-0.5 transition-all group"
               >
                 <div className="flex items-start gap-3">
                   {thumb ? (
@@ -158,7 +163,7 @@ export const PersonasWorkspace: React.FC = () => {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-black text-white truncate">{persona.name}</h3>
+                      <h3 className="text-sm font-bold text-white truncate">{persona.name}</h3>
                       {persona.isDefault && <Badge variant="connection">Default</Badge>}
                     </div>
                     <p className="text-[11px] text-smash-text-tertiary truncate">{brandName}</p>
@@ -194,21 +199,20 @@ export const PersonasWorkspace: React.FC = () => {
                   <Button variant="tertiary" size="sm" className="flex-1 text-[10px]" onClick={() => navigate(`/generate/image?persona=${persona.id}`)}>
                     Use
                   </Button>
-                  <Button variant="icon" size="sm" className="w-8 h-8" title="Edit" onClick={() => openEditor(persona)}>
-                    <Pencil size={13} />
-                  </Button>
-                  <Button variant="icon" size="sm" className="w-8 h-8" title="Duplicate" onClick={() => handleDuplicate(persona)}>
-                    <Copy size={13} />
-                  </Button>
-                  <Button
-                    variant="icon"
-                    size="sm"
-                    className="w-8 h-8 hover:text-rose-300"
-                    title="Delete"
-                    onClick={() => handleDelete(persona)}
-                  >
-                    <Trash2 size={13} />
-                  </Button>
+                  {([
+                    { label: 'Edit', icon: Pencil, onClick: () => openEditor(persona), className: '' },
+                    { label: 'Duplicate', icon: Copy, onClick: () => handleDuplicate(persona), className: '' },
+                    { label: 'Delete', icon: Trash2, onClick: () => handleDelete(persona), className: 'hover:text-rose-300' },
+                  ]).map(({ label, icon: ActionIcon, onClick, className }) => (
+                    <Tooltip key={label}>
+                      <TooltipTrigger asChild>
+                        <Button variant="icon" size="icon-sm" aria-label={label} className={className} onClick={onClick}>
+                          <ActionIcon size={13} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{label}</TooltipContent>
+                    </Tooltip>
+                  ))}
                 </div>
               </motion.div>
             );

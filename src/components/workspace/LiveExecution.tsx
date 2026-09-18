@@ -11,6 +11,7 @@ import { JobCard } from './JobCard';
 import { CompareWorkspace } from './CompareWorkspace';
 import { PromptRevisionBar } from './PromptRevisionBar';
 import { useExecution } from '../../contexts/ExecutionContext';
+import { Separator } from '../ui/separator';
 
 interface LiveExecutionProps {
   jobs: Job[];
@@ -56,9 +57,9 @@ export const LiveExecution: React.FC<LiveExecutionProps> = ({ jobs, mode, onCanc
 
   return (
     <div className="flex flex-col h-full gap-6 relative">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/[0.02] p-6 rounded-[24px] border border-white/5 shrink-0 z-10 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/[0.02] backdrop-blur-md p-5 md:p-6 rounded-2xl border border-white/5 shrink-0 z-10 gap-4">
         <div className="flex flex-col gap-2">
-          <h2 className="text-xl font-black text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
             {isAllComplete ? 'Execution Session Complete' : 'Live Execution'}
             {!isAllComplete && <span className="w-2 h-2 rounded-full bg-[#D946EF] animate-pulse" />}
           </h2>
@@ -69,7 +70,7 @@ export const LiveExecution: React.FC<LiveExecutionProps> = ({ jobs, mode, onCanc
             {retryingCount > 0 && <span className="text-rose-400">{retryingCount} Retrying</span>}
             {limitedCount > 0 && <span className="text-rose-500">{limitedCount} Limited</span>}
             {errorCount > 0 && <span className="text-red-400">{errorCount} Failed</span>}
-            <div className="w-px h-3 bg-white/10 hidden sm:block" />
+            <Separator orientation="vertical" className="h-3! bg-white/10 hidden sm:block" />
             <span className="text-violet-400 flex items-center gap-1">
               <Coins size={10} /> ${estimatedCost.toFixed(2)}
             </span>
@@ -83,12 +84,12 @@ export const LiveExecution: React.FC<LiveExecutionProps> = ({ jobs, mode, onCanc
                 <>
                   <Button variant="ghost" size="sm" onClick={() => { setIsComparing(false); setCompareIds([]); }}>CANCEL</Button>
                   <Button variant="primary" size="sm" disabled={compareIds.length < 2} onClick={handleOpenCompare}>
-                    <SplitSquareHorizontal size={14} className="mr-2" /> COMPARE ({compareIds.length})
+                    <SplitSquareHorizontal size={14} /> COMPARE ({compareIds.length})
                   </Button>
                 </>
               ) : (
                 <Button variant="secondary" size="sm" onClick={() => setIsComparing(true)}>
-                  <SplitSquareHorizontal size={14} className="mr-2" /> COMPARE
+                  <SplitSquareHorizontal size={14} /> COMPARE
                 </Button>
               )}
             </div>
@@ -98,15 +99,15 @@ export const LiveExecution: React.FC<LiveExecutionProps> = ({ jobs, mode, onCanc
             <>
               {isPaused ? (
                 <Button variant="secondary" size="sm" className="hidden md:flex" onClick={resumeSession}>
-                  <PlayCircle size={14} className="mr-1.5" /> RESUME ALL
+                  <PlayCircle size={14} /> RESUME ALL
                 </Button>
               ) : (
                 <Button variant="secondary" size="sm" className="hidden md:flex" onClick={pauseSession}>
-                  <PauseCircle size={14} className="mr-1.5" /> PAUSE
+                  <PauseCircle size={14} /> PAUSE
                 </Button>
               )}
               <Button variant="danger" size="sm" onClick={stopSession}>
-                <StopCircle size={14} className="mr-1.5" /> STOP ALL
+                <StopCircle size={14} /> STOP ALL
               </Button>
             </>
           ) : (

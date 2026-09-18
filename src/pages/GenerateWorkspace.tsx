@@ -17,6 +17,7 @@ import { usePersonas } from '../contexts/PersonasContext';
 import { AnimatePresence, motion } from 'motion/react';
 import { Button } from '../components/ui/Button';
 import { ChevronUp, X, Sparkles, Layers, Wand2 } from 'lucide-react';
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from '../components/ui/sheet';
 
 const VALID_MODES = ['image', 'video', 'text', 'audio'];
 
@@ -166,12 +167,12 @@ export const GenerateWorkspace: React.FC = () => {
 
                 {/* Mobile Model Picker Trigger */}
                 <div className="lg:hidden mt-2">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-smash-text-tertiary mb-3 flex items-center gap-1.5">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-smash-text-tertiary mb-3 flex items-center gap-1.5">
                     <Layers size={12} /> Target Models
                   </h3>
                   <button
                     onClick={() => setIsModelSheetOpen(true)}
-                    className="w-full glass-2 border border-white/10 rounded-2xl p-4 flex items-center justify-between hover:bg-white/5 active:scale-[0.98] transition-all"
+                    className="w-full glass-2 border border-white/10 rounded-2xl p-4 flex items-center justify-between hover:bg-white/5 active:scale-[0.98] transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
                   >
                     <div className="flex flex-col items-start gap-1">
                       <span className="text-sm font-bold text-white">Select AI Models</span>
@@ -199,52 +200,38 @@ export const GenerateWorkspace: React.FC = () => {
               </div>
 
               {/* Mobile Model Selector Bottom Sheet */}
-              <AnimatePresence>
-                {isModelSheetOpen && (
-                  <>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      onClick={() => setIsModelSheetOpen(false)}
-                      className="fixed inset-0 bg-black/80 z-[100] lg:hidden backdrop-blur-sm"
+              <Sheet open={isModelSheetOpen} onOpenChange={setIsModelSheetOpen}>
+                <SheetContent
+                  side="bottom"
+                  showCloseButton={false}
+                  className="lg:hidden h-[85vh] rounded-t-3xl border-t border-white/10 gap-0 p-0"
+                >
+                  <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/40 rounded-t-3xl">
+                    <SheetTitle className="text-sm font-bold text-white uppercase tracking-wider">Select Models</SheetTitle>
+                    <SheetDescription className="sr-only">Choose which AI models run this task</SheetDescription>
+                    <SheetClose asChild>
+                      <Button variant="icon" size="icon-sm" aria-label="Close">
+                        <X size={16} />
+                      </Button>
+                    </SheetClose>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <ModelSelector
+                      activeMode={mode as string}
+                      selectedIds={selectedModelIds}
+                      onSelectToggle={handleSelectToggle}
+                      onSelectAll={setSelectedModelIds}
+                      agentTargets={agentTargets}
+                      onAgentTargetChange={setAgentTarget}
                     />
-                    <motion.div
-                      initial={{ y: '100%' }}
-                      animate={{ y: 0 }}
-                      exit={{ y: '100%' }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                      className="fixed inset-x-0 bottom-0 h-[85vh] glass-1 border-t border-white/10 rounded-t-[32px] z-[100] lg:hidden flex flex-col"
-                    >
-                      <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/40 rounded-t-[32px]">
-                        <h3 className="text-sm font-black text-white uppercase tracking-wider">Select Models</h3>
-                        <Button
-                          variant="icon"
-                          onClick={() => setIsModelSheetOpen(false)}
-                          className="w-8 h-8 glass-3 text-smash-text-secondary hover:text-white"
-                        >
-                          <X size={16} />
-                        </Button>
-                      </div>
-                      <div className="flex-1 overflow-hidden">
-                        <ModelSelector
-                          activeMode={mode as string}
-                          selectedIds={selectedModelIds}
-                          onSelectToggle={handleSelectToggle}
-                          onSelectAll={setSelectedModelIds}
-                          agentTargets={agentTargets}
-                          onAgentTargetChange={setAgentTarget}
-                        />
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
+                  </div>
+                </SheetContent>
+              </Sheet>
 
               {/* Mobile Sticky Bottom Bar */}
               <div className="lg:hidden fixed bottom-16 left-0 right-0 p-4 glass-2 border-t border-white/10 z-40 bg-black/60 backdrop-blur-xl">
                 <div className="flex items-center justify-between max-w-md mx-auto">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-smash-text-tertiary">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-smash-text-tertiary">
                     {selectedModelIds.length} {selectedModelIds.length === 1 ? 'Model' : 'Models'} Selected
                   </span>
                   <Button
@@ -252,9 +239,9 @@ export const GenerateWorkspace: React.FC = () => {
                     onClick={handleRunSmash}
                     disabled={!canRun}
                     isLoading={isStarting}
-                    className="h-12 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(217,70,239,0.3)]"
+                    className="h-12 px-6 rounded-xl tracking-wide"
                   >
-                    <Sparkles size={16} className="mr-2" /> RUN SMASH
+                    <Sparkles size={16} /> RUN SMASH
                   </Button>
                 </div>
               </div>
@@ -269,7 +256,7 @@ export const GenerateWorkspace: React.FC = () => {
             >
               {/* What the compiler actually sent - so a persona run is explainable. */}
               {context?.personaName && (
-                <details className="shrink-0 mb-3 glass-3 border border-white/10 rounded-2xl px-4 py-2.5 text-xs">
+                <details className="shrink-0 mb-3 glass-3 border border-white/10 rounded-xl px-4 py-2.5 text-xs">
                   <summary className="cursor-pointer flex items-center gap-2 text-smash-text-secondary select-none">
                     <Wand2 size={12} className="text-[#D946EF]" />
                     <span className="font-bold text-white">{context.personaName}</span>

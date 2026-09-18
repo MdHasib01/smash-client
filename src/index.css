@@ -1,4 +1,64 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* SMASH is dark-only; shadcn components key their dark styles off `.dark` on <html>. */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * shadcn/ui semantic tokens, mapped onto the SMASH palette so every
+ * shadcn primitive inherits the brand colors (violet → magenta → coral).
+ */
+:root {
+  --background: #050507;
+  --foreground: #ffffff;
+  --card: rgba(20, 20, 25, 0.55);
+  --card-foreground: #ffffff;
+  --popover: #0d0d11;
+  --popover-foreground: #ffffff;
+  --primary: #d946ef;
+  --primary-foreground: #ffffff;
+  --secondary: #1c1c22;
+  --secondary-foreground: #ffffff;
+  --muted: #141419;
+  --muted-foreground: #a1a1aa;
+  --accent: rgba(255, 255, 255, 0.06);
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #d946ef;
+  --chart-1: #8b5cf6;
+  --chart-2: #d946ef;
+  --chart-3: #fb7185;
+  --chart-4: #a855f7;
+  --chart-5: #f43f5e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+}
 
 @theme {
   --color-smash-base: #050507;
@@ -42,6 +102,10 @@
 }
 
 @layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
   body {
     background-color: var(--color-smash-base);
     color: var(--color-smash-text-primary);
@@ -102,49 +166,48 @@
   }
 }
 
-@layer utilities {
-  .glass-1 {
-    background: rgba(25, 25, 30, 0.4);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-  }
-  
-  .glass-2 {
-    background: rgba(40, 40, 50, 0.3);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
+/*
+ * Registered with @utility (not @layer) so Tailwind v4 variants such as
+ * hover:, md: and data-[state=on]: work with them.
+ */
+@utility glass-1 {
+  background-color: rgba(25, 25, 30, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
   @media (min-width: 768px) {
-    .glass-1 {
-      backdrop-filter: blur(12px);
-    }
-    .glass-2 {
-      backdrop-filter: blur(8px);
-    }
+    backdrop-filter: blur(12px);
   }
+}
 
-  .glass-3 {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+@utility glass-2 {
+  background-color: rgba(40, 40, 50, 0.3);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  @media (min-width: 768px) {
+    backdrop-filter: blur(8px);
   }
-  
-  .text-gradient-primary {
-    background: linear-gradient(135deg, #7C3AED 0%, #D946EF 50%, #FB7185 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
+}
 
-  .bg-gradient-primary {
-    background: linear-gradient(135deg, #7C3AED 0%, #D946EF 50%, #FB7185 100%);
-  }
-  
-  .border-gradient-primary {
-    position: relative;
-  }
-  .border-gradient-primary::before {
+@utility glass-3 {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@utility text-gradient-primary {
+  background-image: linear-gradient(135deg, #7C3AED 0%, #D946EF 50%, #FB7185 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility bg-gradient-primary {
+  background-image: linear-gradient(135deg, #7C3AED 0%, #D946EF 50%, #FB7185 100%);
+}
+
+@utility border-gradient-primary {
+  position: relative;
+  &::before {
     content: "";
     position: absolute;
     inset: -1px;
@@ -154,7 +217,7 @@
     opacity: 0.5;
     transition: opacity 0.3s ease;
   }
-  .border-gradient-primary:hover::before {
+  &:hover::before {
     opacity: 1;
   }
 }

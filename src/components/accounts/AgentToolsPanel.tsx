@@ -20,7 +20,7 @@ export const AgentToolsPanel: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-2 border border-white/10 rounded-3xl p-5 flex flex-col gap-4"
+      className="glass-2 border border-white/10 rounded-2xl p-5 flex flex-col gap-4"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -28,16 +28,17 @@ export const AgentToolsPanel: React.FC = () => {
             <Terminal size={15} />
           </div>
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-smash-text-tertiary">Agent Tools</h3>
-            <p className="text-sm font-black text-white leading-tight">{tools?.name ?? 'Node Agent'}</p>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-smash-text-tertiary">Agent Tools</h3>
+            <p className="text-sm font-bold text-white leading-tight">{tools?.name ?? 'Node Agent'}</p>
           </div>
         </div>
 
         <Button
           variant="icon"
-          size="sm"
-          className="w-8 h-8 shrink-0"
+          size="icon-sm"
+          className="shrink-0"
           title="Re-check the agent"
+          aria-label="Re-check the agent"
           onClick={() => load(true)}
           disabled={isLoading}
         >
@@ -74,7 +75,7 @@ export const AgentToolsPanel: React.FC = () => {
           {tools.reachable && (
             <>
               <div className="flex flex-col gap-2">
-                <span className="text-[9px] font-black uppercase tracking-widest text-smash-text-tertiary">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-smash-text-tertiary">
                   Available CLIs
                 </span>
                 <div className="flex flex-wrap gap-1.5">

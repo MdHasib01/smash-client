@@ -6,9 +6,10 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Logo } from '../components/ui/Logo';
 import { ApiError } from '../lib/api';
+import { Label as UiLabel } from '../components/ui/label';
 
-const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="text-[10px] font-black tracking-widest uppercase text-smash-text-secondary">{children}</span>
+const Label: React.FC<{ htmlFor: string; children: React.ReactNode }> = ({ htmlFor, children }) => (
+  <UiLabel htmlFor={htmlFor} className="text-[10px] font-bold tracking-widest uppercase text-smash-text-secondary">{children}</UiLabel>
 );
 
 export const LoginPage: React.FC = () => {
@@ -38,11 +39,11 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-6 bg-smash-bg">
+    <div className="min-h-screen w-full flex items-center justify-center p-6 bg-smash-base">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm glass-1 border border-white/10 rounded-[32px] p-8 flex flex-col gap-6 shadow-2xl shadow-black/50"
+        className="relative w-full max-w-sm glass-1 border border-white/10 rounded-3xl p-8 flex flex-col gap-6 shadow-2xl shadow-black/50"
       >
         <div className="flex flex-col items-center gap-3">
           <Logo size="lg" showText />
@@ -53,8 +54,9 @@ export const LoginPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label>Email</Label>
+            <Label htmlFor="login-email">Email</Label>
             <Input
+              id="login-email"
               type="email"
               autoComplete="username"
               required
@@ -66,8 +68,9 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Password</Label>
+            <Label htmlFor="login-password">Password</Label>
             <Input
+              id="login-password"
               type="password"
               autoComplete="current-password"
               required
@@ -85,7 +88,7 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          <Button type="submit" variant="primary" size="lg" isLoading={isSubmitting} className="w-full font-black">
+          <Button type="submit" variant="primary" size="lg" isLoading={isSubmitting} className="w-full tracking-wide">
             {isSubmitting ? 'Signing in…' : 'Sign In'}
           </Button>
         </form>

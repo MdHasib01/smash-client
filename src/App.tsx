@@ -6,6 +6,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { GlobalUIProvider, useGlobalUI } from './contexts/GlobalUIContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { ConfirmProvider } from './contexts/ConfirmContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { BrandsProvider } from './contexts/BrandsContext';
 import { PersonasProvider } from './contexts/PersonasContext';
@@ -26,6 +27,7 @@ import { AnalyticsWorkspace } from './pages/AnalyticsWorkspace';
 import { SettingsWorkspace } from './pages/SettingsWorkspace';
 import { LoginPage } from './pages/LoginPage';
 import { Logo } from './components/ui/Logo';
+import { TooltipProvider } from './components/ui/tooltip';
 
 const GenerateRedirect = () => {
   const { currentMode } = useGlobalUI();
@@ -65,7 +67,7 @@ const AuthGate = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-smash-bg">
+      <div className="min-h-screen flex items-center justify-center bg-smash-base">
         <div className="animate-pulse">
           <Logo size="lg" showText />
         </div>
@@ -94,10 +96,14 @@ const AuthGate = () => {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <AuthGate />
-      </AuthProvider>
-    </ToastProvider>
+    <TooltipProvider delayDuration={200}>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <AuthGate />
+          </AuthProvider>
+        </ConfirmProvider>
+      </ToastProvider>
+    </TooltipProvider>
   );
 }

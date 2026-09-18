@@ -7,6 +7,8 @@ import { motion } from 'motion/react';
 import { ResultLightbox, LightboxItem } from '../results/ResultLightbox';
 import { copyText, downloadUrl, fileNameFor } from '../../lib/download';
 import { useToast } from '../../contexts/ToastContext';
+import { Badge } from '../ui/Badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface ResultCardProps {
   job: Job;
@@ -110,25 +112,42 @@ export const ResultCard: React.FC<ResultCardProps> = ({
           )}
           {!isComparing && (
             <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
-              <Button variant="icon" title="View full size" onClick={openLightbox} className="glass-3 text-white w-10 h-10 hover:text-[#D946EF]">
-                <Maximize2 size={16} />
-              </Button>
-              <Button
-                variant="icon"
-                title="Download"
-                onClick={() => downloadUrl(url!, fileNameFor(title, url))}
-                className="glass-3 text-white w-10 h-10 hover:text-[#D946EF]"
-              >
-                <Download size={16} />
-              </Button>
-              <Button
-                variant="icon"
-                title="Open in a new tab"
-                onClick={() => window.open(url, '_blank', 'noopener')}
-                className="glass-3 text-white w-10 h-10 hover:text-[#D946EF]"
-              >
-                <ExternalLink size={16} />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="icon" size="icon" aria-label="View full size" onClick={openLightbox} className="text-white hover:text-[#D946EF]">
+                    <Maximize2 size={16} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>View full size</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="icon"
+                    size="icon"
+                    aria-label="Download"
+                    onClick={() => downloadUrl(url!, fileNameFor(title, url))}
+                    className="text-white hover:text-[#D946EF]"
+                  >
+                    <Download size={16} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Download</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="icon"
+                    size="icon"
+                    aria-label="Open in a new tab"
+                    onClick={() => window.open(url, '_blank', 'noopener')}
+                    className="text-white hover:text-[#D946EF]"
+                  >
+                    <ExternalLink size={16} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Open in a new tab</TooltipContent>
+              </Tooltip>
             </div>
           )}
         </>
@@ -160,7 +179,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className={cn(
-          'glass-2 rounded-[24px] border transition-all duration-300 flex flex-col overflow-hidden relative group',
+          'glass-2 rounded-2xl border transition-all duration-300 flex flex-col overflow-hidden relative group',
           isSelectedForCompare ? 'border-[#D946EF] shadow-[0_0_20px_rgba(217,70,239,0.2)]' : 'border-white/5',
           isComparing && !isSelectedForCompare && 'opacity-50 scale-[0.98]'
         )}
@@ -188,17 +207,17 @@ export const ResultCard: React.FC<ResultCardProps> = ({
           {renderContent()}
         </div>
 
-        <div className="p-4 flex flex-col gap-3 glass-1 border-t border-white/5 relative z-10">
+        <div className="p-4 flex flex-col gap-3 bg-black/30 backdrop-blur-md border-t border-white/5 relative z-10">
           <div className="flex flex-col gap-1 min-w-0">
             <span className="font-bold text-sm text-white flex items-center gap-1.5 min-w-0">
               <span className="truncate">{job.connection.name}</span>
               {job.attempts.length > 1 && (
-                <span className="shrink-0 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300">
+                <Badge variant="warning" className="shrink-0 text-[8px] tracking-widest px-1.5">
                   Auto-fixed
-                </span>
+                </Badge>
               )}
             </span>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] font-black uppercase tracking-widest text-smash-text-secondary">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] font-bold uppercase tracking-widest text-smash-text-secondary">
               <span>{job.connection.provider}</span>
               {agentLine && (
                 <span className="flex items-center gap-1 text-violet-300">
@@ -216,39 +235,39 @@ export const ResultCard: React.FC<ResultCardProps> = ({
 
           {!isComparing && !isPending && (
             <div className="flex gap-1.5">
-              <Button variant="secondary" size="sm" className="h-7 px-2 text-[9px] flex-1" onClick={copy}>
-                <Copy size={10} className="mr-1.5" /> {url ? 'COPY URL' : 'COPY'}
+              <Button variant="secondary" size="sm" className="h-7 px-2 gap-1 text-[9px] flex-1" onClick={copy}>
+                <Copy size={10} /> {url ? 'COPY URL' : 'COPY'}
               </Button>
               {url ? (
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="h-7 px-2 text-[9px] flex-1"
+                  className="h-7 px-2 gap-1 text-[9px] flex-1"
                   onClick={() => downloadUrl(url, fileNameFor(title, url))}
                 >
-                  <Download size={10} className="mr-1.5" /> SAVE
+                  <Download size={10} /> SAVE
                 </Button>
               ) : (
-                <Button variant="secondary" size="sm" className="h-7 px-2 text-[9px] flex-1" onClick={openLightbox}>
-                  <Maximize2 size={10} className="mr-1.5" /> VIEW
+                <Button variant="secondary" size="sm" className="h-7 px-2 gap-1 text-[9px] flex-1" onClick={openLightbox}>
+                  <Maximize2 size={10} /> VIEW
                 </Button>
               )}
               <Button
                 variant="secondary"
                 size="sm"
-                className="h-7 px-2 text-[9px] flex-1"
+                className="h-7 px-2 gap-1 text-[9px] flex-1"
                 onClick={() => onAction && onAction('RETRY', job.id)}
               >
-                <RefreshCcw size={10} className="mr-1.5" /> RETRY
+                <RefreshCcw size={10} /> RETRY
               </Button>
               {url && !isAudio && (
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="h-7 px-2 text-[9px] flex-1 text-[#D946EF] hover:bg-[#D946EF]/10 border-[#D946EF]/20"
+                  className="h-7 px-2 gap-1 text-[9px] flex-1 text-[#D946EF] hover:bg-[#D946EF]/10 border-[#D946EF]/20"
                   onClick={() => onAction && onAction('USE_REF', job.id)}
                 >
-                  <Send size={10} className="mr-1.5" /> USE REF
+                  <Send size={10} /> USE REF
                 </Button>
               )}
             </div>

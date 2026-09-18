@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { BrandOptions } from '../components/brands/BrandOptions';
+import { BrandSelect } from '../components/brands/BrandOptions';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Input } from '../components/ui/Input';
+import { Separator } from '../components/ui/separator';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -31,33 +34,34 @@ export const HistoryWorkspace: React.FC = () => {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Folder size={14} className="text-smash-text-secondary" />
-              <select 
-                value={activeProject}
-                onChange={(e) => setActiveProject(e.target.value)}
-                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-[#D946EF]/50 appearance-none min-w-[140px]"
-              >
-                <BrandOptions />
-              </select>
+              <BrandSelect value={activeProject} onValueChange={setActiveProject} />
             </div>
             
-            <div className="w-px h-6 bg-white/10" />
+            <Separator orientation="vertical" className="h-6! bg-white/10" />
 
-            <div className="flex items-center gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
-              <Button variant={activeTab === 'TASKS' ? 'primary' : 'ghost'} size="sm" onClick={() => setActiveTab('TASKS')} className="text-[10px] w-24">TASK HISTORY</Button>
-              <Button variant={activeTab === 'PROMPTS' ? 'primary' : 'ghost'} size="sm" onClick={() => setActiveTab('PROMPTS')} className="text-[10px] w-28">PROMPT HISTORY</Button>
-            </div>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+              <TabsList className="h-10! rounded-xl bg-black/40">
+                {([['TASKS', 'TASK HISTORY'], ['PROMPTS', 'PROMPT HISTORY']] as const).map(([value, label]) => (
+                  <TabsTrigger
+                    key={value}
+                    value={value}
+                    className="px-3 text-[10px] font-bold tracking-widest rounded-lg data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:border-transparent data-[state=active]:shadow-[0_0_16px_rgba(217,70,239,0.35)]"
+                  >
+                    {label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </div>
           
           <div className="flex items-center gap-3">
-             <div className="relative">
-               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-smash-text-secondary" />
-               <input 
-                 type="text" 
-                 placeholder="Search history..."
-                 className="bg-black/20 border border-white/10 rounded-lg pl-9 pr-4 py-1.5 text-sm text-white placeholder:text-smash-text-secondary focus:outline-none focus:border-[#D946EF]/50 transition-colors w-48 focus:w-64"
-               />
-             </div>
-             <Button variant="secondary" size="sm" className="h-8 text-[10px]"><Filter size={12} className="mr-1.5"/> FILTERS</Button>
+             <Input
+               type="text"
+               icon={<Search size={14} />}
+               placeholder="Search history..."
+               className="h-8 bg-black/20 w-48 focus:w-64 transition-all"
+             />
+             <Button variant="secondary" size="sm" className="h-8 text-[10px]"><Filter size={12}/> FILTERS</Button>
           </div>
         </div>
 
@@ -81,12 +85,12 @@ export const HistoryWorkspace: React.FC = () => {
                   onClick={() => setExpandedId(isExpanded ? null : task.id)}
                 >
                   <div className="flex items-center gap-4 min-w-[200px]">
-                    <div className="w-10 h-10 rounded-xl glass-3 flex items-center justify-center shrink-0 border border-white/10">
+                    <div className="w-10 h-10 rounded-xl glass-3 flex items-center justify-center shrink-0">
                       <History size={16} className="text-white/70" />
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="font-mono text-xs font-bold text-white">{task.id}</span>
-                      <span className="text-[10px] uppercase font-black tracking-widest text-smash-text-tertiary flex items-center gap-1.5">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-smash-text-tertiary flex items-center gap-1.5">
                          <div className={cn("w-1.5 h-1.5 rounded-full", task.status === 'COMPLETE' ? "bg-violet-400" : "bg-rose-400")} />
                          {task.status}
                       </span>
@@ -96,7 +100,7 @@ export const HistoryWorkspace: React.FC = () => {
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <p className="text-sm text-white/90 font-medium truncate">{task.prompt}</p>
                     <div className="flex items-center gap-3 text-[10px] text-smash-text-secondary font-bold uppercase tracking-widest">
-                      <span className="text-[#D946EF] border border-[#D946EF]/20 bg-[#D946EF]/10 px-1.5 py-0.5 rounded">{task.project}</span>
+                      <Badge variant="status" statusColor="paused" className="text-[10px] tracking-widest">{task.project}</Badge>
                       <span>{task.mode}</span>
                       <span className="flex items-center gap-1"><Cpu size={10}/> {task.models} Models</span>
                       <span className="flex items-center gap-1"><Activity size={10}/> {task.results} Results</span>
@@ -122,10 +126,10 @@ export const HistoryWorkspace: React.FC = () => {
                       className="border-t border-white/5 bg-black/40"
                     >
                       <div className="p-5 flex flex-wrap gap-2">
-                        <Button variant="primary" size="sm" className="h-8 text-[10px]"><Play size={12} className="mr-1.5 fill-white"/> RUN AGAIN</Button>
-                        <Button variant="secondary" size="sm" className="h-8 text-[10px]"><Edit3 size={12} className="mr-1.5"/> EDIT & RUN</Button>
-                        <Button variant="secondary" size="sm" className="h-8 text-[10px]"><Users size={12} className="mr-1.5"/> CHANGE MODELS</Button>
-                        <Button variant="secondary" size="sm" className="h-8 text-[10px]"><Image size={12} className="mr-1.5"/> CHANGE REFERENCES</Button>
+                        <Button variant="primary" size="sm" className="h-8 text-[10px]"><Play size={12} className="fill-white"/> RUN AGAIN</Button>
+                        <Button variant="secondary" size="sm" className="h-8 text-[10px]"><Edit3 size={12}/> EDIT & RUN</Button>
+                        <Button variant="secondary" size="sm" className="h-8 text-[10px]"><Users size={12}/> CHANGE MODELS</Button>
+                        <Button variant="secondary" size="sm" className="h-8 text-[10px]"><Image size={12}/> CHANGE REFERENCES</Button>
                       </div>
                     </motion.div>
                   )}

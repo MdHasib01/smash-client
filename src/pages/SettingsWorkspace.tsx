@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Button } from '../components/ui/Button';
-import { Settings, Users, Shield, Bell, HardDrive, Cpu, SlidersHorizontal, Lock, Search, AlertCircle, Trash2, Key } from 'lucide-react';
+import { Settings, Users, Shield, Bell, HardDrive, Cpu, SlidersHorizontal, Lock, Search, AlertCircle, Trash2, Key, Activity } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { Switch } from '../components/ui/switch';
+import { Label } from '../components/ui/label';
+import { SelectField } from '../components/ui/select-field';
+import { Badge } from '../components/ui/Badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 
 const SECTIONS = [
   { id: 'GENERAL', icon: <Settings size={14} />, label: 'General & Appearance' },
@@ -15,17 +20,14 @@ const SECTIONS = [
   { id: 'SYSTEM', icon: <Activity size={14} />, label: 'System Health (Admin)' },
 ];
 
-import { Activity } from 'lucide-react'; // Fix import
-
 const Toggle = ({ label, desc, active }: { label: string, desc?: string, active: boolean }) => (
   <div className="flex items-center justify-between py-3">
     <div className="flex flex-col gap-0.5">
       <span className="text-sm font-bold text-white">{label}</span>
       {desc && <span className="text-[10px] text-smash-text-secondary">{desc}</span>}
     </div>
-    <div className={cn("w-10 h-6 rounded-full flex items-center px-1 transition-colors cursor-pointer", active ? "bg-[#D946EF]" : "bg-white/10")}>
-      <div className={cn("w-4 h-4 rounded-full bg-white transition-transform", active ? "translate-x-4" : "translate-x-0")} />
-    </div>
+    {/* Display-only until settings are persisted. */}
+    <Switch checked={active} tabIndex={-1} aria-readonly aria-label={label} className="pointer-events-none" />
   </div>
 );
 
@@ -46,7 +48,7 @@ export const SettingsWorkspace: React.FC = () => {
               key={sec.id}
               onClick={() => setActiveSection(sec.id)}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all text-left",
+                "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40",
                 activeSection === sec.id 
                   ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-white/5" 
                   : "text-smash-text-secondary hover:text-white hover:bg-white/5 border border-transparent"
@@ -59,13 +61,13 @@ export const SettingsWorkspace: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 glass-1 border border-white/5 rounded-3xl p-8 overflow-y-auto">
+        <div className="flex-1 glass-1 border border-white/5 rounded-2xl p-6 md:p-8 overflow-y-auto">
           <AnimatePresence mode="wait">
             
             {activeSection === 'GENERAL' && (
               <motion.div key="gen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-8 max-w-2xl">
                 <div>
-                  <h2 className="text-lg font-black text-white mb-1">Appearance</h2>
+                  <h2 className="text-lg font-bold text-white mb-1">Appearance</h2>
                   <p className="text-sm text-smash-text-secondary mb-6">Manage visual density and motion preferences.</p>
                   
                   <div className="glass-2 border border-white/5 rounded-2xl p-4 flex flex-col divide-y divide-white/5">
@@ -76,18 +78,18 @@ export const SettingsWorkspace: React.FC = () => {
                 </div>
 
                 <div>
-                  <h2 className="text-lg font-black text-white mb-1">Defaults</h2>
+                  <h2 className="text-lg font-bold text-white mb-1">Defaults</h2>
                   <p className="text-sm text-smash-text-secondary mb-6">Set standard behaviors for new sessions.</p>
                   
                   <div className="glass-2 border border-white/5 rounded-2xl p-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <label className="text-xs font-bold text-smash-text-secondary uppercase">Startup Mode</label>
-                      <select className="bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:outline-none w-full">
-                        <option>Text Generation</option>
-                        <option>Image Generation</option>
-                        <option>Dashboard</option>
-                        <option>Last Used</option>
-                      </select>
+                      <Label className="text-xs font-bold text-smash-text-secondary uppercase">Startup Mode</Label>
+                      <SelectField
+                        aria-label="Startup Mode"
+                        className="bg-black/40"
+                        defaultValue="Text Generation"
+                        options={['Text Generation', 'Image Generation', 'Dashboard', 'Last Used'].map((o) => ({ value: o, label: o }))}
+                      />
                     </div>
                   </div>
                 </div>
@@ -97,7 +99,7 @@ export const SettingsWorkspace: React.FC = () => {
             {activeSection === 'NOTIFICATIONS' && (
               <motion.div key="notif" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-8 max-w-2xl">
                 <div>
-                  <h2 className="text-lg font-black text-white mb-1">Notification Preferences</h2>
+                  <h2 className="text-lg font-bold text-white mb-1">Notification Preferences</h2>
                   <p className="text-sm text-smash-text-secondary mb-6">Control what triggers in-app alerts.</p>
                   
                   <div className="glass-2 border border-white/5 rounded-2xl p-4 flex flex-col divide-y divide-white/5">
@@ -114,7 +116,7 @@ export const SettingsWorkspace: React.FC = () => {
             {activeSection === 'GENERATION' && (
               <motion.div key="gen-set" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-8 max-w-2xl">
                  <div>
-                  <h2 className="text-lg font-black text-white mb-1">Retry & Limit Logic</h2>
+                  <h2 className="text-lg font-bold text-white mb-1">Retry & Limit Logic</h2>
                   <p className="text-sm text-smash-text-secondary mb-6">Configure how SMASH handles API errors and safety filters.</p>
                   
                   <div className="glass-2 border border-white/5 rounded-2xl p-4 flex flex-col divide-y divide-white/5">
@@ -136,7 +138,7 @@ export const SettingsWorkspace: React.FC = () => {
             {activeSection === 'SECURITY' && (
               <motion.div key="sec" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-8 max-w-2xl">
                  <div>
-                  <h2 className="text-lg font-black text-white mb-1">Security & Secrets</h2>
+                  <h2 className="text-lg font-bold text-white mb-1">Security & Secrets</h2>
                   <p className="text-sm text-smash-text-secondary mb-6">Manage API keys and local environment limits.</p>
                   
                   <div className="glass-2 border border-white/5 rounded-2xl p-4 flex flex-col gap-4">
@@ -145,11 +147,11 @@ export const SettingsWorkspace: React.FC = () => {
                          <Shield size={16} className="text-violet-400" />
                          <span className="text-sm font-bold text-violet-400">Credentials Encrypted</span>
                        </div>
-                       <span className="text-[10px] text-violet-400 uppercase tracking-widest font-black">ACTIVE</span>
+                       <span className="text-[10px] text-violet-400 uppercase tracking-widest font-bold">ACTIVE</span>
                      </div>
                      
                      <div className="mt-4 flex flex-col gap-3">
-                       <span className="text-xs font-black uppercase tracking-widest text-white">API Keys</span>
+                       <span className="text-xs font-bold uppercase tracking-widest text-white">API Keys</span>
                        {[
                          { name: 'Gemini API', lastUpdated: '2 months ago' },
                          { name: 'OpenAI API', lastUpdated: '1 month ago' }
@@ -175,43 +177,43 @@ export const SettingsWorkspace: React.FC = () => {
               <motion.div key="team" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-8">
                  <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-black text-white mb-1">User Management</h2>
+                    <h2 className="text-lg font-bold text-white mb-1">User Management</h2>
                     <p className="text-sm text-smash-text-secondary">Control team access and roles.</p>
                   </div>
                   <Button variant="primary" size="sm">INVITE USER</Button>
                 </div>
                 
                 <div className="glass-2 border border-white/5 rounded-2xl overflow-hidden">
-                   <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-black/20 text-[9px] uppercase tracking-widest font-black text-smash-text-tertiary">
-                          <th className="p-4 border-b border-white/5 font-black">User</th>
-                          <th className="p-4 border-b border-white/5 font-black">Role</th>
-                          <th className="p-4 border-b border-white/5 font-black">Projects</th>
-                          <th className="p-4 border-b border-white/5 font-black text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-xs font-medium text-white/90">
+                   <Table>
+                      <TableHeader>
+                        <TableRow className="bg-black/20 hover:bg-black/20 border-white/5">
+                          <TableHead className="h-auto p-4 text-[9px] uppercase tracking-widest font-bold text-smash-text-tertiary">User</TableHead>
+                          <TableHead className="h-auto p-4 text-[9px] uppercase tracking-widest font-bold text-smash-text-tertiary">Role</TableHead>
+                          <TableHead className="h-auto p-4 text-[9px] uppercase tracking-widest font-bold text-smash-text-tertiary">Projects</TableHead>
+                          <TableHead className="h-auto p-4 text-[9px] uppercase tracking-widest font-bold text-smash-text-tertiary text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="text-xs font-medium text-white/90">
                         {[
                           { name: 'milkimominfo@gmail.com', role: 'OWNER', projects: 'All Projects' },
                           { name: 'designer@milkimom.com', role: 'DESIGNER', projects: 'Milkimom' },
                           { name: 'reviewer@client.com', role: 'VIEWER', projects: 'Baby Herbs' },
                         ].map((u, i) => (
-                          <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                            <td className="p-4 font-bold">{u.name}</td>
-                            <td className="p-4"><span className="bg-white/10 px-2 py-0.5 rounded text-[9px] font-black tracking-widest">{u.role}</span></td>
-                            <td className="p-4 text-smash-text-secondary">{u.projects}</td>
-                            <td className="p-4 text-right">
+                          <TableRow key={i} className="border-white/5 hover:bg-white/[0.03]">
+                            <TableCell className="p-4 font-bold">{u.name}</TableCell>
+                            <TableCell className="p-4"><Badge variant="secondary" className="text-[9px] tracking-widest">{u.role}</Badge></TableCell>
+                            <TableCell className="p-4 text-smash-text-secondary">{u.projects}</TableCell>
+                            <TableCell className="p-4 text-right">
                               <Button variant="ghost" size="sm" className="text-[10px] text-red-400 hover:bg-red-400/10 hover:text-red-300">REMOVE</Button>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                   </table>
+                      </TableBody>
+                   </Table>
                 </div>
                 
                 <div className="mt-4">
-                   <h3 className="text-xs font-black uppercase tracking-widest text-white mb-4">Audit Log</h3>
+                   <h3 className="text-xs font-bold uppercase tracking-widest text-white mb-4">Audit Log</h3>
                    <div className="glass-2 border border-white/5 rounded-2xl p-4 flex flex-col gap-3 max-h-64 overflow-y-auto">
                      {[
                        { action: 'Changed settings: Default Mode to Image', user: 'milkimominfo@gmail.com', time: '10 mins ago' },

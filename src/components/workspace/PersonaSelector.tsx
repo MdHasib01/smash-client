@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { UserRound, ChevronDown, Sparkles, Images, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePersonas } from '../../contexts/PersonasContext';
 import { useBrands } from '../../contexts/BrandsContext';
 import { Persona, StylePreset } from '../../types/api';
 import { cn } from '../../lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Separator } from '../ui/separator';
 
 interface PersonaSelectorProps {
   personaId: string | null;
@@ -74,14 +75,11 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
         </button>
 
         {/* Persona pill */}
-        <div className="relative">
+        <Popover open={isPersonaOpen} onOpenChange={(open) => { setPersonaOpen(open); if (open) setStyleOpen(false); }}>
+          <PopoverTrigger asChild>
           <button
-            onClick={() => {
-              setPersonaOpen((v) => !v);
-              setStyleOpen(false);
-            }}
             className={cn(
-              'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-colors',
+              'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40',
               persona
                 ? 'bg-[#D946EF]/10 text-[#D946EF] border-[#D946EF]/20'
                 : 'bg-white/5 text-smash-text-secondary border-white/10 hover:text-white'
@@ -91,14 +89,11 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
             {persona ? persona.name : 'No persona'}
             <ChevronDown size={11} />
           </button>
+          </PopoverTrigger>
 
-          <AnimatePresence>
-            {isPersonaOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                className="absolute top-full left-0 mt-2 w-72 max-h-80 overflow-y-auto glass-3 rounded-xl p-2 border border-white/10 shadow-xl z-50 flex flex-col gap-1"
+              <PopoverContent
+                align="start"
+                className="w-72 max-h-80 overflow-y-auto rounded-xl p-2 flex flex-col gap-1"
               >
                 <button
                   onClick={() => {
@@ -114,7 +109,7 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                   No persona — use my prompt as-is
                 </button>
 
-                <div className="h-px bg-white/5 my-1" />
+                <Separator className="my-1 bg-white/5" />
 
                 {brandPersonas.map((p) => (
                   <PersonaRow
@@ -138,33 +133,25 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                     Create your first persona →
                   </button>
                 )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              </PopoverContent>
+        </Popover>
 
         {/* Style pill */}
         {persona && (
-          <div className="relative">
+          <Popover open={isStyleOpen} onOpenChange={(open) => { setStyleOpen(open); if (open) setPersonaOpen(false); }}>
+            <PopoverTrigger asChild>
             <button
-              onClick={() => {
-                setStyleOpen((v) => !v);
-                setPersonaOpen(false);
-              }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-violet-500/10 text-violet-300 border border-violet-500/20 hover:bg-violet-500/20 transition-colors"
             >
               <Sparkles size={11} />
               {effectiveStyle?.name ?? 'No style'}
               <ChevronDown size={11} />
             </button>
+            </PopoverTrigger>
 
-            <AnimatePresence>
-              {isStyleOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  className="absolute top-full left-0 mt-2 w-64 max-h-80 overflow-y-auto glass-3 rounded-xl p-2 border border-white/10 shadow-xl z-50 flex flex-col gap-1"
+                <PopoverContent
+                  align="start"
+                  className="w-64 max-h-80 overflow-y-auto rounded-xl p-2 flex flex-col gap-1"
                 >
                   <button
                     onClick={() => {
@@ -175,7 +162,7 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                   >
                     Persona default
                   </button>
-                  <div className="h-px bg-white/5 my-1" />
+                  <Separator className="my-1 bg-white/5" />
                   {styles.map((s) => (
                     <button
                       key={s.id}
@@ -191,10 +178,8 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
                       {s.name}
                     </button>
                   ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                </PopoverContent>
+          </Popover>
         )}
 
         {persona && references.length > 0 && (

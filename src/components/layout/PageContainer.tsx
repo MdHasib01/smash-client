@@ -28,9 +28,9 @@ export const PageContainer: React.FC<PageContainerProps> = ({
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Page Header */}
-      <header className="shrink-0 flex items-start justify-between pb-6 border-b border-white/5 mb-6">
+      <header className="shrink-0 flex items-start justify-between gap-4 pb-6 border-b border-white/5 mb-6">
         <div className="flex flex-col gap-1 max-w-2xl">
-          <h1 className="text-3xl font-black tracking-tight text-white leading-tight">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-tight">
             {title}
           </h1>
           {description && (
@@ -45,7 +45,8 @@ export const PageContainer: React.FC<PageContainerProps> = ({
             <Button 
               variant="icon" 
               onClick={() => setInspectorOpen(true)}
-              className="text-[#D946EF] hover:bg-[#D946EF]/10 hover:border-[#D946EF]/20"
+              aria-label="Open inspector"
+              className="text-[#D946EF] hover:text-[#D946EF] hover:bg-[#D946EF]/10 hover:border-[#D946EF]/20"
             >
               <PanelRightOpen size={16} />
             </Button>

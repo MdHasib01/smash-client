@@ -20,6 +20,11 @@ import { PageContainer } from '../components/layout/PageContainer';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { EmptyState } from '../components/ui/EmptyState';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { SelectField } from '../components/ui/select-field';
+import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group';
+import { Toggle } from '../components/ui/toggle';
+import { Badge } from '../components/ui/Badge';
 import { ResultLightbox, LightboxItem } from '../components/results/ResultLightbox';
 import { useBrands } from '../contexts/BrandsContext';
 import { useToast } from '../contexts/ToastContext';
@@ -53,6 +58,7 @@ export const Results: React.FC = () => {
   const navigate = useNavigate();
   const { brands, activeBrand, setActiveBrandId } = useBrands();
   const { addToast } = useToast();
+  const confirm = useConfirm();
 
   const [results, setResults] = useState<ApiResult[]>([]);
   const [meta, setMeta] = useState<ApiMeta | undefined>();
@@ -140,7 +146,7 @@ export const Results: React.FC = () => {
   };
 
   const remove = async (result: ApiResult) => {
-    if (!window.confirm('Delete this result? This cannot be undone.')) return;
+    if (!(await confirm({ title: 'Delete result?', description: 'Delete this result? This cannot be undone.' }))) return;
     try {
       await del(`/results/${result.id}`);
       setResults((prev) => prev.filter((r) => r.id !== result.id));
@@ -172,68 +178,72 @@ export const Results: React.FC = () => {
       description="Every generation filed under the active brand. Switch brand to see its gallery."
       primaryAction={
         <Button variant="primary" onClick={() => navigate('/generate/image')} disabled={!activeBrand}>
-          <Sparkles size={16} className="mr-1.5" /> Generate
+          <Sparkles size={16} /> Generate
         </Button>
       }
       secondaryToolbar={
         <div className="w-full flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
             <Building2 size={14} className="text-smash-text-secondary" />
-            <select
+            <SelectField
+              size="sm"
+              aria-label="Brand"
               value={activeBrand?.id ?? ''}
-              onChange={(e) => setActiveBrandId(e.target.value)}
-              className="bg-black/40 border border-white/10 rounded-lg h-9 px-3 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-[#D946EF] [&>option]:bg-black"
-            >
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+              onValueChange={setActiveBrandId}
+              className="w-auto min-w-[140px] h-9! bg-black/40 text-xs font-semibold"
+              options={brands.map((b) => ({
+                value: b.id,
+                label: (
+                  <>
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: b.color }} />
+                    {b.name}
+                  </>
+                ),
+              }))}
+            />
           </div>
 
-          <div className="flex gap-1 p-1 rounded-xl glass-3 border border-white/5">
+          <ToggleGroup
+            type="single"
+            spacing={1}
+            value={mode}
+            onValueChange={(v) => v && setMode(v as typeof mode)}
+            className="p-1 rounded-xl glass-3"
+          >
             {MODES.map(({ key, label, icon: Icon }) => (
-              <button
+              <ToggleGroupItem
                 key={key}
-                onClick={() => setMode(key)}
-                className={cn(
-                  'px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1',
-                  mode === key ? 'bg-white/10 text-white' : 'text-smash-text-tertiary hover:text-white'
-                )}
+                value={key}
+                size="sm"
+                className="h-7 px-2.5 gap-1 rounded-lg text-[10px] font-bold uppercase tracking-widest text-smash-text-tertiary"
               >
                 {Icon && <Icon size={11} />} {label}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
 
           {personaOptions.length > 0 && (
-            <select
+            <SelectField
+              size="sm"
+              aria-label="Persona filter"
               value={personaFilter}
-              onChange={(e) => setPersonaFilter(e.target.value)}
-              className="bg-black/40 border border-white/10 rounded-lg h-9 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#D946EF] [&>option]:bg-black"
-            >
-              <option value="ALL">All personas</option>
-              {personaOptions.map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
-                </option>
-              ))}
-              <option value="NONE">No persona</option>
-            </select>
+              onValueChange={setPersonaFilter}
+              className="w-auto min-w-[140px] h-9! bg-black/40 text-xs"
+              options={[
+                { value: 'ALL', label: 'All personas' },
+                ...personaOptions.map(([id, name]) => ({ value: id, label: name })),
+                { value: 'NONE', label: 'No persona' },
+              ]}
+            />
           )}
 
-          <button
-            onClick={() => setFavoritesOnly((v) => !v)}
-            className={cn(
-              'h-9 px-3 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-colors',
-              favoritesOnly
-                ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
-                : 'bg-black/40 border-white/10 text-smash-text-secondary hover:text-white'
-            )}
+          <Toggle
+            pressed={favoritesOnly}
+            onPressedChange={setFavoritesOnly}
+            className="h-9 px-3 gap-1.5 rounded-lg border text-xs font-bold bg-black/40 border-white/10 text-smash-text-secondary data-[state=on]:bg-rose-500/15 data-[state=on]:border-rose-500/30 data-[state=on]:text-rose-300"
           >
             <Heart size={12} fill={favoritesOnly ? 'currentColor' : 'none'} /> Favorites
-          </button>
+          </Toggle>
 
           <div className="ml-auto w-full sm:w-56">
             <Input
@@ -272,11 +282,11 @@ export const Results: React.FC = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index, 12) * 0.02 }}
-                className="group glass-2 border border-white/10 rounded-3xl overflow-hidden flex flex-col hover:border-white/20 transition-colors"
+                className="group glass-2 border border-white/10 rounded-2xl overflow-hidden flex flex-col hover:border-white/20 hover:-translate-y-0.5 transition-all"
               >
                 <button
                   onClick={() => open(r)}
-                  className="relative aspect-square bg-black/40 overflow-hidden text-left"
+                  className="relative aspect-square bg-black/40 overflow-hidden text-left outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
                   title="View"
                 >
                   {r.contentUrl && !r.mimeType?.startsWith('audio/') ? (
@@ -312,39 +322,46 @@ export const Results: React.FC = () => {
                       <p className="text-xs font-bold text-white truncate">{r.connection?.name ?? 'Result'}</p>
                       <p className="text-[10px] text-smash-text-tertiary">{relativeTime(r.createdAt)}</p>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
                       onClick={() => toggleFavorite(r)}
                       title={r.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                      aria-label={r.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                       className={cn(
-                        'w-7 h-7 rounded-lg flex items-center justify-center transition-colors shrink-0',
-                        r.isFavorite ? 'text-rose-400' : 'text-smash-text-tertiary hover:text-rose-300'
+                        'size-7 rounded-lg shrink-0',
+                        r.isFavorite ? 'text-rose-400 hover:text-rose-400' : 'text-smash-text-tertiary hover:text-rose-300'
                       )}
                     >
                       <Heart size={14} fill={r.isFavorite ? 'currentColor' : 'none'} />
-                    </button>
+                    </Button>
                   </div>
 
                   {r.context?.personaName && (
-                    <span className="self-start flex items-center gap-1 text-[10px] font-bold text-[#D946EF] bg-[#D946EF]/10 px-2 py-0.5 rounded-md max-w-full truncate">
+                    <Badge variant="status" statusColor="paused" className="self-start normal-case tracking-normal max-w-full truncate">
                       <UserRound size={10} className="shrink-0" /> {r.context.personaName}
-                    </span>
+                    </Badge>
                   )}
 
                   <div className="flex items-center gap-1 pt-1 border-t border-white/5">
                     {r.contentUrl && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="xs"
                         onClick={() => downloadUrl(r.contentUrl!, fileNameFor(titleFor(r), r.contentUrl))}
-                        className="flex-1 h-7 rounded-lg text-[10px] font-bold text-smash-text-secondary hover:text-white hover:bg-white/5 flex items-center justify-center gap-1"
+                        className="flex-1 text-[10px]"
                       >
                         <Download size={11} /> Save
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={() => remove(r)}
-                      className="flex-1 h-7 rounded-lg text-[10px] font-bold text-smash-text-secondary hover:text-rose-300 hover:bg-white/5 flex items-center justify-center gap-1"
+                      className="flex-1 text-[10px] hover:text-rose-300"
                     >
                       <Trash2 size={11} /> Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </motion.div>

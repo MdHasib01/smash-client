@@ -6,7 +6,6 @@ import { Header } from './Header';
 import { RightInspector } from './RightInspector';
 import { CommandPalette } from './CommandPalette';
 import { NotificationsPanel } from './NotificationsPanel';
-import { AnimatePresence } from 'motion/react';
 
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Setup global keyboard shortcuts or responsive behavior here
@@ -42,12 +41,8 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           <RightInspector />
         </main>
       </div>
-      <AnimatePresence>
-        <CommandPalette />
-      </AnimatePresence>
-      <AnimatePresence>
-        <NotificationsPanel isOpen={isNotificationsOpen} onClose={() => setNotificationsOpen(false)} />
-      </AnimatePresence>
+      <CommandPalette />
+      <NotificationsPanel isOpen={isNotificationsOpen} onClose={() => setNotificationsOpen(false)} />
     </div>
   );
 };

@@ -15,20 +15,22 @@ export const RightInspector: React.FC = () => {
           animate={{ width: 340, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="h-full shrink-0 border-l border-white/5 glass-1 flex flex-col overflow-hidden relative z-20"
+          className="h-full shrink-0 glass-1 border-y-0 border-r-0 border-l border-white/5 flex flex-col overflow-hidden relative z-20"
         >
           <div className="w-[340px] h-full flex flex-col">
-            <div className="h-14 border-b border-white/5 flex items-center justify-between px-4 shrink-0 glass-2">
+            <div className="h-14 border-b border-white/5 flex items-center justify-between px-4 shrink-0 bg-white/[0.02]">
               <div className="flex items-center gap-2 text-white">
                 <SlidersHorizontal size={14} className="text-[#D946EF]" />
-                <span className="font-black tracking-tight text-sm uppercase">{inspectorTitle}</span>
+                <span className="font-bold tracking-wide text-xs uppercase">{inspectorTitle}</span>
               </div>
-              <button 
+              <Button
+                variant="icon"
+                size="icon-xs"
                 onClick={() => setInspectorOpen(false)}
-                className="w-6 h-6 rounded-md glass-3 flex items-center justify-center text-smash-text-secondary hover:text-white hover:bg-white/10"
+                aria-label="Close inspector"
               >
                 <X size={14} />
-              </button>
+              </Button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">

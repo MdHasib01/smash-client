@@ -6,6 +6,8 @@ import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAccounts } from '../contexts/AccountsContext';
+import { Progress } from '../components/ui/progress';
+import { Badge } from '../components/ui/Badge';
 
 const MOCK_ACTIVE = [
   { id: 'TSK-1051', type: 'IMAGE', title: 'Premium product hero shot...', status: 'RUNNING', models: 4, progress: 65 },
@@ -59,10 +61,10 @@ export const Dashboard: React.FC = () => {
                   <button 
                     key={mode.id}
                     onClick={() => navigate(`/generate/${mode.id}`)}
-                    className={cn("glass-2 border border-white/5 p-4 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all group", mode.color)}
+                    className={cn("glass-2 border border-white/5 p-4 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all group hover:-translate-y-0.5 hover:bg-white/[0.04] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40", mode.color)}
                   >
                     <div className="text-white/70 group-hover:text-inherit transition-colors">{mode.icon}</div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/90">{mode.label}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/90">{mode.label}</span>
                   </button>
                 ))}
               </div>
@@ -73,21 +75,18 @@ export const Dashboard: React.FC = () => {
           <div className="w-full md:w-80 flex flex-col gap-4 shrink-0">
             <div className="glass-2 border border-white/5 p-5 rounded-2xl flex flex-col gap-4">
                <div className="flex items-center justify-between">
-                 <span className="text-[10px] uppercase font-black tracking-widest text-smash-text-secondary">System Health</span>
-                 <span className={cn(
-                   "flex items-center gap-1.5 text-[10px] uppercase font-black px-2 py-0.5 rounded border",
-                   isHealthy ? "text-violet-400 bg-violet-400/10 border-violet-400/20" : "text-red-400 bg-red-400/10 border-red-400/20"
-                 )}>
+                 <span className="text-[10px] uppercase font-bold tracking-widest text-smash-text-secondary">System Health</span>
+                 <Badge variant="status" statusColor={isHealthy ? 'connected' : 'error'} className="gap-1.5">
                    <Activity size={10} /> {isHealthy ? 'Operational' : 'Critical'}
-                 </span>
+                 </Badge>
                </div>
                <div className="grid grid-cols-2 gap-3 mt-2">
                  <div className="flex flex-col gap-1">
-                   <span className="text-2xl font-black text-white">{activeConnectionsCount}</span>
+                   <span className="text-2xl font-bold text-white">{activeConnectionsCount}</span>
                    <span className="text-[10px] uppercase font-bold text-smash-text-secondary">Active Conns</span>
                  </div>
                  <div className="flex flex-col gap-1">
-                   <span className="text-2xl font-black text-rose-400">{limitedConnectionsCount}</span>
+                   <span className="text-2xl font-bold text-rose-400">{limitedConnectionsCount}</span>
                    <span className="text-[10px] uppercase font-bold text-smash-text-secondary">Limited</span>
                  </div>
                </div>
@@ -95,7 +94,7 @@ export const Dashboard: React.FC = () => {
             
             {limitedConnections.length > 0 && (
               <div className="glass-2 border border-white/5 p-5 rounded-2xl flex flex-col gap-3">
-                 <span className="text-[10px] uppercase font-black tracking-widest text-smash-text-secondary">Limited Accounts</span>
+                 <span className="text-[10px] uppercase font-bold tracking-widest text-smash-text-secondary">Limited Accounts</span>
                  {limitedConnections.map(conn => (
                    <div key={conn.id} className="flex items-center justify-between bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl mb-2 last:mb-0">
                      <div className="flex flex-col">
@@ -116,7 +115,7 @@ export const Dashboard: React.FC = () => {
           {/* Active Operations */}
           <div className="flex flex-col gap-4 col-span-1 lg:col-span-2">
             <div className="flex items-center justify-between">
-               <h2 className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-2"><Zap size={14} className="text-[#D946EF]" /> Live Operations</h2>
+               <h2 className="text-xs font-bold uppercase tracking-widest text-white flex items-center gap-2"><Zap size={14} className="text-[#D946EF]" /> Live Operations</h2>
                <Button variant="ghost" size="sm" className="text-[10px]" onClick={() => navigate('/history')}>VIEW ALL</Button>
             </div>
             
@@ -129,12 +128,14 @@ export const Dashboard: React.FC = () => {
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold text-white truncate">{task.title}</span>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-smash-text-secondary">{task.models} Models</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-smash-text-secondary">{task.models} Models</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="flex-1 h-1.5 bg-black/40 rounded-full overflow-hidden">
-                        <div className={cn("h-full rounded-full transition-all duration-500", task.status === 'RUNNING' ? "bg-gradient-to-r from-violet-500 to-fuchsia-500" : "bg-white/20")} style={{ width: `${task.progress}%` }} />
-                      </div>
+                      <Progress
+                        value={task.progress}
+                        className="flex-1 h-1.5 bg-black/40"
+                        indicatorClassName={cn("duration-500", task.status === 'RUNNING' ? "bg-gradient-to-r from-violet-500 to-fuchsia-500" : "bg-none bg-white/20")}
+                      />
                       <span className="text-[10px] font-bold w-8 text-right text-white/50">{task.progress}%</span>
                     </div>
                   </div>
@@ -146,26 +147,26 @@ export const Dashboard: React.FC = () => {
           {/* Quick Analytics */}
           <div className="flex flex-col gap-4">
              <div className="flex items-center justify-between">
-               <h2 className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-2"><History size={14} className="text-[#D946EF]" /> Today's Snapshot</h2>
+               <h2 className="text-xs font-bold uppercase tracking-widest text-white flex items-center gap-2"><History size={14} className="text-[#D946EF]" /> Today's Snapshot</h2>
                <Button variant="ghost" size="sm" className="text-[10px]" onClick={() => navigate('/analytics')}>DETAILS</Button>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
                <div className="glass-1 border border-white/5 p-4 rounded-xl flex flex-col gap-1">
                  <span className="text-[10px] uppercase font-bold text-smash-text-secondary">Tasks</span>
-                 <span className="text-xl font-black text-white">1,204</span>
+                 <span className="text-xl font-bold text-white">1,204</span>
                </div>
                <div className="glass-1 border border-white/5 p-4 rounded-xl flex flex-col gap-1">
                  <span className="text-[10px] uppercase font-bold text-smash-text-secondary">Success Rate</span>
-                 <span className="text-xl font-black text-violet-400">98.2%</span>
+                 <span className="text-xl font-bold text-violet-400">98.2%</span>
                </div>
                <div className="glass-1 border border-white/5 p-4 rounded-xl flex flex-col gap-1">
                  <span className="text-[10px] uppercase font-bold text-smash-text-secondary">Outputs</span>
-                 <span className="text-xl font-black text-white">4,816</span>
+                 <span className="text-xl font-bold text-white">4,816</span>
                </div>
                <div className="glass-1 border border-white/5 p-4 rounded-xl flex flex-col gap-1">
                  <span className="text-[10px] uppercase font-bold text-smash-text-secondary">API Spend</span>
-                 <span className="text-xl font-black text-rose-400">$12.40</span>
+                 <span className="text-xl font-bold text-rose-400">$12.40</span>
                </div>
             </div>
           </div>
@@ -174,7 +175,7 @@ export const Dashboard: React.FC = () => {
         {/* RECENT RESULTS */}
         <div className="flex flex-col gap-4">
            <div className="flex items-center justify-between">
-             <h2 className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-2"><PlayCircle size={14} className="text-violet-400" /> Recent Results</h2>
+             <h2 className="text-xs font-bold uppercase tracking-widest text-white flex items-center gap-2"><PlayCircle size={14} className="text-violet-400" /> Recent Results</h2>
              <Button variant="ghost" size="sm" className="text-[10px]" onClick={() => navigate('/results')}>GALLERY</Button>
           </div>
           
